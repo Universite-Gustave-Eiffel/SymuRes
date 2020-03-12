@@ -9,7 +9,7 @@ SymuRes is licenced under the terms of the GNU GPL v3 licence.
 
 Authors
 -------
-- Guilhem Mariotte - guilhem.mariotte@ifsttar.fr
+- Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr
 (Simulation platform design, traffic flow solvers, pre-processing and post-processing modules)
 
 - Sergio Batista - 
