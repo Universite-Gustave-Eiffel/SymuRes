@@ -1,9 +1,9 @@
-%% SYMURES 1.0 - Multi-reservoir MFD-based traffic simulator
+%% SYMURES 1.0 - A Multi-Reservoir MFD-Based Traffic Simulator
 %--------------------------------------------------------------------------
 %
 % Authors
 % -------
-% Guilhem Mariotte - guilhem.mariotte@ifsttar.fr
+% Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr
 % (Simulation platform design, traffic flow solvers, pre-processing
 % and post-processing modules)
 %
@@ -12,7 +12,7 @@
 %
 % Version
 % -------
-% 5.0, October 2019
+% 1.0, October 2019
 
 clear all
 clc
@@ -82,9 +82,9 @@ try
             
             % MFD solving
             if Simulation.Solver == 1
-                MFDsolver_accbased52
+                MFDsolver_accbased
             elseif Simulation.Solver == 2
-                MFDsolver_tripbased90
+                MFDsolver_tripbased
             end
             
             % Convergence calculation
