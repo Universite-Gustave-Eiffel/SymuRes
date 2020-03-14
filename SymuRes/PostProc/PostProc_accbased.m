@@ -1,6 +1,8 @@
 %% POST-PROCESSING
 %--------------------------------------------------------------------------
 % Accumulation-based model
+%
+% Nov 2019 - Guilhem Mariotte
 
 NumRes = length(Reservoir);
 NumODmacro = length(ODmacro);
