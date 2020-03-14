@@ -7,12 +7,16 @@ Licence
 -------
 SymuRes is licenced under the terms of the GNU GPL v3 licence.
 
+Acknowledgments
+---------------
+This simulation platform was developed during the PhD of Guilhem Mariotte. It also received contributions from the PhD thesis of Sérgio F. A. Batista for the traffic assignment part. It is one of the outcomes of the MAGnUM project, held by Prof. Ludovic Leclercq and funded by the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation program (grant agreement No 646592).
+
 Authors
 -------
 - Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr
 (Simulation platform design, traffic flow solvers, pre-processing and post-processing modules)
 
-- Sergio F. A. Batista - 
+- Sergio F. A. Batista - sab21@nyu.edu
 (DTA module, assignment and convergence loop)
 
 Designing a simulation
