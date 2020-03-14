@@ -5,6 +5,9 @@ function ODflowdistrib = ChoiceModel(od,RoutesList,Reservoir,Route,Assignment,Si
 %
 % Feb 2019 - Sergio F. A. Batista
 %
+% Reference:
+% Batista & Leclercq (TS, 2019)
+%
 % INPUTS
 %---- od         : scalar, ID of the considered OD
 %---- RoutesList : vector, list of route IDs for the considered OD
