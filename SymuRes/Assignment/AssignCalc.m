@@ -1,5 +1,10 @@
 %% ASSIGNCALC: Assignment calculation
 %--------------------------------------------------------------------------
+% Assign OD demand flows to the routes (path flow distribution):
+% Calculate the new possible assignment or path flow coefficients for each route
+% with a choice model, and update the effective coefficient with the MSA formula.
+%
+% Nov 2019 - Guilhem Mariotte
 
 SimulationDuration = Simulation.Duration;
 TimeStep = Simulation.TimeStep;
