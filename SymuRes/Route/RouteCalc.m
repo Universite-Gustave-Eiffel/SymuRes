@@ -1,5 +1,10 @@
 %% ROUTE CALCULATION
 %--------------------------------------------------------------------------
+% Build the Route structure for the simulation
+% If no predefined routes in DemDef, the routes are created with shortest
+% path calculations, otherwise, the previously defined routes are used
+%
+% Nov 2019 - Guilhem Mariotte
 
 % Simulation time
 Simulation.Time = 0:Simulation.TimeStep:Simulation.Duration; % vector of times [s]
