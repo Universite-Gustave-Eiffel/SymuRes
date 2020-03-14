@@ -1,6 +1,9 @@
 function ODflowdistrib = EmpiricalModel(od,RoutesList,Reservoir,Route,Assignment,Simulation)
+% ODflowdistrib = EmpiricalModel(od,RoutesList,Reservoir,Route,Assignment,Simulation)
 % Return the path flow distribution for a given OD according to a traffic
 % equilibrium model
+%
+% Nov 2019 - Guilhem Mariotte
 %
 % INPUTS
 %---- od         : scalar, ID of the considered OD
