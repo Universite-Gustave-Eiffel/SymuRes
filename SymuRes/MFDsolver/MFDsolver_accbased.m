@@ -1,15 +1,14 @@
 %% MFD SOLVER
 %--------------------------------------------------------------------------
-% Multi-reservoir simulator
-% Accumulation-based approach, Yildirimoglu & Geroliminis (2014)
+% Multi-reservoir MFD-based traffic flow solver
+% Accumulation-based model
 %
-% V5.1 - Global management of outflows, most limiting exit to define
-% global supply at reservoir exit, iterative process to find this exit
-% Merge function to use full available production capacity at entry
-% Include internal trips management
-% Solving by successive assignment periods
-% New definition of routes and add merge/diverge options
-% New storage of acc, flows in reservoirs
+% Nov 2019 - Guilhem Mariotte
+%
+% References:
+% Mariotte et al. (TR part B, 2017)
+% Mariotte & Leclercq (TR part B, 2019)
+% Mariotte et al. (TR part B, 2020)
 
 % Simulation attributes
 SimulationDuration = Simulation.Duration;
