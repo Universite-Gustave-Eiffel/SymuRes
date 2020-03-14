@@ -1,18 +1,14 @@
 %% MFD SOLVER
 %--------------------------------------------------------------------------
-% Multi-reservoir simulator
-% Trip-based approach, Mariotte et al. (2017)
+% Multi-reservoir MFD-based traffic flow solver
+% Trip-based model
 %
-% V9.0 - Most restrictive outflow supply
-% Entry supply function
-% Update of mean speed on the total number of vehicles
-% Direct assignment on routes
-% Change entry supply times to use full available production capacity
-% Management of internal trips
-% Improve the computational complexity of the numerical scheme
-% Solving by successive assignment periods
-% New definition of routes and add merge/diverge options
-% Add the scaling factor to improve computational time
+% Nov 2019 - Guilhem Mariotte
+%
+% References:
+% Mariotte et al. (TR part B, 2017)
+% Mariotte & Leclercq (TR part B, 2019)
+% Mariotte et al. (TR part B, 2020)
 
 
 %% Vehicle creation
