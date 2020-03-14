@@ -12,7 +12,7 @@ Authors
 - Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr
 (Simulation platform design, traffic flow solvers, pre-processing and post-processing modules)
 
-- Sergio Batista - 
+- Sergio F. A. Batista - 
 (DTA module, assignment and convergence loop)
 
 Designing a simulation
