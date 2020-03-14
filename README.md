@@ -17,12 +17,12 @@ Authors
 
 Designing a simulation
 ----------------------
-In your network folder in the 'UserNetworks/' directory, create or edit the scripts SimulSettings.m (global settings of the simulation, i.e. duration, timestep, assignment, etc), ResDef.m (characteristics of the reservoirs), DemDef.m (definition of the macroscopic OD matrix)
+In your network folder in the `UserNetworks/` directory, create or edit the scripts `SimulSettings.m` (global settings of the simulation, i.e. duration, timestep, assignment, etc), `ResDef.m` (characteristics of the reservoirs), `DemDef.m` (definition of the macroscopic OD matrix).
 
 Launching a simulation
 ----------------------
-Specify the network, the solver and the name of the output file in the script Main.m. Run this script for a classical simulation (with eventually DTA) in the main SymuRes directory. The output of the simulation is always saved into the 'outputs/' folder in the corresponding network folder.
+Specify the network, the solver and the name of the output file in the script `Main.m`. Run this script for a classical simulation (with eventually DTA) in the main SymuRes directory. The output of the simulation is always saved into the `outputs/` folder in the corresponding network folder.
 
 Plotting the results of a simulation
 ------------------------------------
-Specify the simulation outputs to load at the beginning of the script scrPlotResults.m. Several simulations can be loaded at the same time. Run parts of this script to plot the desired results (accumulations, flows, N-curves, travel times, etc). For each plot script, indicate the relevant list of simulation results, reservoirs, routes to compare.
+Specify the simulation outputs to load at the beginning of the script `scrPlotResults.m`. Several simulations can be loaded at the same time. Run parts of this script to plot the desired results (accumulations, flows, N-curves, travel times, etc). For each plot script, indicate the relevant list of simulation results, reservoirs, routes to compare.
