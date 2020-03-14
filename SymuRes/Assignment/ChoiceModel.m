@@ -1,6 +1,9 @@
 function ODflowdistrib = ChoiceModel(od,RoutesList,Reservoir,Route,Assignment,Simulation)
+% ODflowdistrib = ChoiceModel(od,RoutesList,Reservoir,Route,Assignment,Simulation)
 % Return the path flow distribution for a given OD according to a traffic
 % equilibrium model
+%
+% Feb 2019 - Sergio F. A. Batista
 %
 % INPUTS
 %---- od         : scalar, ID of the considered OD
