@@ -2,6 +2,8 @@
 %--------------------------------------------------------------------------
 % This routine calculates the convergence criteria. This includes the Gap
 % function and the number of violations.
+%
+% Feb 2019 - Sergio F. A. Batista
 
 SimulationDuration = Simulation.Duration;
 TimeStep = Simulation.TimeStep;
