@@ -9,11 +9,11 @@ SymuRes is licensed under the terms of the GNU GPL v3 license.
 
 Acknowledgments
 ---------------
-This simulation platform was developed during the PhD of Guilhem Mariotte. It also received contributions from the PhD thesis of Sérgio F. A. Batista for the traffic assignment part. It is one of the outcomes of the MAGnUM project, held by Prof. Ludovic Leclercq and funded by the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation program (grant agreement No 646592).
+This simulation platform was developed during the PhD of Guilhem Mariotte. It also received contributions from the PhD thesis of Sérgio F. A. Batista for the traffic assignment part. It is one of the outcomes of the [MAGnUM project](https://magnum-erc.weebly.com/), held by Prof. Ludovic Leclercq and funded by the European Research Council (ERC) under the European Union's Horizon 2020 research and innovation program (grant agreement No 646592).
 
 Authors
 -------
-- Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr
+- Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr | guilhemmariotte.com
 (Simulation platform design, traffic flow solvers, pre-processing and post-processing modules)
 
 - Sergio F. A. Batista - sab21@nyu.edu
