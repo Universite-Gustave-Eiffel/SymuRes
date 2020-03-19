@@ -13,7 +13,7 @@ This simulation platform was developed during the PhD of Guilhem Mariotte. It al
 
 Authors
 -------
-- Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr | guilhemmariotte.com
+- Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr | [guilhemmariotte.com](http://guilhemmariotte.com/en)
 (Simulation platform design, traffic flow solvers, pre-processing and post-processing modules)
 
 - Sergio F. A. Batista - sab21@nyu.edu
