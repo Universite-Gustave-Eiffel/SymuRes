@@ -5,7 +5,7 @@ Version 1.0 - 2019
 
 Licence
 -------
-SymuRes is licenced under the terms of the GNU GPL v3 licence.
+SymuRes is licensed under the terms of the GNU GPL v3 license.
 
 Acknowledgments
 ---------------
