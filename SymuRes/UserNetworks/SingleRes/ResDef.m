@@ -6,13 +6,14 @@
 
 % Reservoir.Centroid ; virtual positioning [x y] for plotting purpose
 % Reservoir.AdjacentRes ; vector, list of adjacent reservoir IDs
+% Reservoir.NetLength ; total network length in the reservoir [m]
 % Reservoir.FreeflowSpeed ; free-flow speed in the reservoir [m/s]
 % Reservoir.MaxProd ; reservoir maximum (critical) production [veh.m/s]
 % Reservoir.MaxAcc ; reservoir maximum (jam) accumulation [veh]
 % Reservoir.CritAcc ; reservoir critical accumulation [veh]
 
 % Number of reservoirs
-NumRes = 4;
+NumRes = 1;
 
 Reservoir = struct('Centroid',cell(1,NumRes));
 
@@ -33,59 +34,16 @@ Entryfct = @(n,param) (n <= param(4)).*param(6) + ...
 i = 1;
 Reservoir(i).Centroid = [0 1]; % virtual positioning [x y] for plotting purpose
 Reservoir(i).BorderPoints = [-1 1 1 -1 -1; 0 0 2 2 0];
-Reservoir(i).AdjacentRes = [2 3]; % adjacent reservoirs
+Reservoir(i).AdjacentRes = 1; % adjacent reservoirs
 Reservoir(i).FreeflowSpeed = 15; % [m/s]
 Reservoir(i).MaxProd = 3000; % [veh.m/s]
 Reservoir(i).MaxAcc = 1000; % [veh]
 Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed; % for a parabolic MFD
 Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
-Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
-    0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
+% (Entry supply function defined in DemDef)
+% Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
+%     0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
 
-
-% R2
-%--------------------------------------------------------------------------
-i = 2;
-Reservoir(i).Centroid = [2 2]; % virtual positioning [x y]
-Reservoir(i).BorderPoints = [1 3 3 1 1; 1 1 3 3 1];
-Reservoir(i).AdjacentRes = [1 3 4]; % adjacent reservoirs
-Reservoir(i).FreeflowSpeed = 15; % [m/s]
-Reservoir(i).MaxProd = 2000; % [veh.m/s]
-Reservoir(i).MaxAcc = 1000; % [veh]
-Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed;
-Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
-Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
-    0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
-
-
-% R3
-%--------------------------------------------------------------------------
-i = 3;
-Reservoir(i).Centroid = [2 0]; % virtual positioning [x y]
-Reservoir(i).BorderPoints = [1 3 3 1 1; -1 -1 1 1 -1];
-Reservoir(i).AdjacentRes = [1 2 4]; % adjacent reservoirs
-Reservoir(i).FreeflowSpeed = 15; % [m/s]
-Reservoir(i).MaxProd = 2000; % [veh.m/s]
-Reservoir(i).MaxAcc = 1000; % [veh]
-Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed;
-Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
-Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
-    0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
-
-
-% R4
-%--------------------------------------------------------------------------
-i = 4;
-Reservoir(i).Centroid = [4 1]; % virtual positioning [x y]
-Reservoir(i).BorderPoints = [3 5 5 3 3; 0 0 2 2 0];
-Reservoir(i).AdjacentRes = [2 3]; % adjacent reservoirs
-Reservoir(i).FreeflowSpeed = 15; % [m/s]
-Reservoir(i).MaxProd = 3000; % [veh.m/s]
-Reservoir(i).MaxAcc = 1000; % [veh]
-Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed;
-Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
-Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
-    0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
 
 
 %%% MACRONODE
@@ -102,50 +60,34 @@ Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir
 % MacroNode.Capacity.Data ; row vector of capacity values across time
 
 i = 1;
-MacroNode(i).Type = 'origin';
+MacroNode(i).Type = 'externalentry';
 MacroNode(i).ResID = 1;
-MacroNode(i).Coord = Reservoir(1).Centroid + [0 0.2];
+MacroNode(i).Coord = Reservoir(1).Centroid + [-1 0.5];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 2;
-MacroNode(i).Type = 'origin';
+MacroNode(i).Type = 'externalentry';
 MacroNode(i).ResID = 1;
-MacroNode(i).Coord = Reservoir(1).Centroid + [0 -0.2];
+MacroNode(i).Coord = Reservoir(1).Centroid + [-1 -0.5];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 3;
-MacroNode(i).Type = 'destination';
-MacroNode(i).ResID = 4;
-MacroNode(i).Coord = Reservoir(4).Centroid + [0 0.2];
+MacroNode(i).Type = 'externalexit';
+MacroNode(i).ResID = 1;
+MacroNode(i).Coord = Reservoir(1).Centroid + [1 0.5];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 4;
-MacroNode(i).Type = 'destination';
-MacroNode(i).ResID = 4;
-MacroNode(i).Coord = Reservoir(4).Centroid + [0 -0.2];
+MacroNode(i).Type = 'externalexit';
+MacroNode(i).ResID = 1;
+MacroNode(i).Coord = Reservoir(1).Centroid + [1 -0.5];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
-i = 5;
-for r = 1:(NumRes-1)
-    for r2 = (r+1):NumRes
-        if ~isempty(find(Reservoir(r).AdjacentRes == r2))
-            MacroNode(i).Type = 'border';
-            MacroNode(i).ResID = [r r2];
-            MacroNode(i).Coord = mean([Reservoir(r).Centroid; Reservoir(r2).Centroid]);
-            MacroNode(i).Capacity.Time = 0; % [s]
-            MacroNode(i).Capacity.Data = 100; % [veh/s]
-            i = i + 1;
-        end
-    end
-end
-% MacroNode(5).Capacity.Time = [0 1500 1800]; % [s]
-% MacroNode(5).Capacity.Data = [100 0.8 100]; % [veh/s]
-
-NumMacroNodes = i - 1;
+NumMacroNodes = i;
 
 % Append to Reservoir structure
 for r = 1:NumRes
@@ -214,26 +156,24 @@ for o = 1:NumOrigins % loop on all possible origins
         ODmacroID(o,d) = od;
         
         if Temp_orinodes(o) == 1 && Temp_destnodes(d) == 3
-            ODmacro(od).NumPossibleRoutes = 4;
+            ODmacro(od).NumPossibleRoutes = 2;
             iroute = 1;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 4];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 8 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000];
+            ODmacro(od).PossibleRoute(iroute).ResPath = 1;
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = 2500;
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
             iroute = 2;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 3 4];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 6 9 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1100 1000];
+            ODmacro(od).PossibleRoute(iroute).ResPath = 1;
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = 2000;
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
-            iroute = 3;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3 4];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 7 9 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000 1000];
-            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
-            iroute = 4;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 3 2 4];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 6 7 8 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [2000 2000 2000 2000];
+        end
+        if Temp_orinodes(o) == 2 && Temp_destnodes(d) == 4
+            ODmacro(od).NumPossibleRoutes = 1;
+            iroute = 1;
+            ODmacro(od).PossibleRoute(iroute).ResPath = 1;
+            ODmacro(od).PossibleRoute(iroute).NodePath = [2 4];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = 1000;
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
         end
         

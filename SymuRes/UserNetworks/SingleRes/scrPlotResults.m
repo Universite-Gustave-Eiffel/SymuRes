@@ -28,9 +28,9 @@ fontname = 'Times New Roman';
 % Result from simulation 1
 %--------------------------------------------------------------------------
 iresu = 1;
-Results(iresu).Network = 'Braess'; % Choice of a network defined by user
+Results(iresu).Network = 'SingleRes'; % Choice of a network defined by user
 Results(iresu).Solver = 1; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC3'; % Simulation name
+Results(iresu).Name = 'SC11'; % Simulation name
 Results(iresu).Name2 = 'acc-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -47,29 +47,6 @@ Results(iresu).SimulTime = Simulation.Time;
 Results(iresu).ODmacro = ODmacro;
 
 
-% Result from simulation 2
-%--------------------------------------------------------------------------
-iresu = 2;
-Results(iresu).Network = 'Braess'; % Choice of a network defined by user
-Results(iresu).Solver = 2; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC3'; % Simulation name
-Results(iresu).Name2 = 'trip-based'; % Name to print on the graph legends
-
-if Results(iresu).Solver == 1
-    load(['UserNetworks/' Results(iresu).Network '/outputs/Outputs_' Results(iresu).Name '_accbased.mat'])
-    PostProc_accbased
-elseif Results(iresu).Solver == 2
-    load(['UserNetworks/' Results(iresu).Network '/outputs/Outputs_' Results(iresu).Name '_tripbased.mat'])
-    PostProc_tripbased
-end
-Results(iresu).Reservoir = Reservoir;
-Results(iresu).Route = Route;
-Results(iresu).Assignment = Assignment;
-Results(iresu).SimulTime = Simulation.Time;
-Results(iresu).ODmacro = ODmacro;
-
-
-
 %% Reservoir config and states
 %--------------------------------------------------------------------------
 
@@ -81,10 +58,10 @@ opts.fontname = 'Arial';
 opts.fontsize = 16;
 opts.linewidth = 2;
 opts.colormap = cmap_perso2;
-plotResBallConfig(Results(iresu).Reservoir,1:NumRes,1,0.5,[1.5 1.5],opts)
+plotResBallConfig(Results(iresu).Reservoir,1:NumRes,1,0.5,[1 1],opts)
 filename = '';
 set(gcf,'PaperUnits','Inches','PaperSize',[6 4],'PaperPosition',[0 0 6 4])
-print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_resconfig' filename '.pdf'])
+% print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_resconfig' filename '.pdf'])
 
 % Plot reservoir configuration, real network
 %--------------------------------------------------------------------------
@@ -96,27 +73,30 @@ opts.linewidth = 0.8;
 opts.colormap = cmap_perso2;
 plotResNetConfig([],Results(iresu).Reservoir,1:NumRes,opts)
 % filename = '_2';
-% set(gcf,'PaperSize',[11 9],'PaperPosition',[0 0 11 9])
+% set(gcf,'PaperUnits','Inches','PaperSize',[6 4],'PaperPosition',[0 0 6 4])
 % print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_resconfig' filename '.pdf'])
 
-% Plot reservoir state (total accumulation) at t, schematic representation
+% Plot reservoir state at t
 %--------------------------------------------------------------------------
+% Plot reservoir state (total accumulation) at t, schematic representation
 figure
-plotResBallAcc(50,Results(iresu).Reservoir,1:NumRes,Results(iresu).SimulTime,0.5,[1.5 1.5],'trafficolor',opts)
+t0 = 2000;
+opts.title = ['\bft = ' num2str(t0) ' s'];
+plotResBallAcc(t0,Results(iresu).Reservoir,1:NumRes,Results(iresu).SimulTime,0.5,[1 1],'trafficolor',opts)
 
 % Plot reservoir state (accumulation per route) at t, schematic representation
 figure
 t0 = 2000;
 opts.title = ['\bft = ' num2str(t0) ' s'];
 opts.showleg = 1;
-plotResBallAccPerRoute(t0,Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,[1 2],Results(iresu).SimulTime,0.5,[1.5 1.5],opts)
+plotResBallAccPerRoute(t0,Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,1,Results(iresu).SimulTime,0.5,[1.5 1.5],opts)
 
 % Plot reservoir state (accumulation per route) at t, real network
 figure
 t0 = 2000;
 opts.title = ['\bft = ' num2str(t0) ' s'];
 opts.showleg = 1;
-plotResNetAccPerRoute(t0,[],Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,[1 2],Results(iresu).SimulTime,opts)
+plotResNetAccPerRoute(t0,[],Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,1,Results(iresu).SimulTime,opts)
 
 % Plot reservoir state (mean speed) at t, real network
 %--------------------------------------------------------------------------
@@ -240,12 +220,12 @@ FS1 = 16; % title font size
 figindex = 'abcdefghijklmnopqrstuvwxyz';
 
 % Plot options
-ResList = [1 2 3 4]; % list of reservoirs
-RoutesList = [1 2]; % list of routes, put to [] for not plotting route states
-ResuList = [1 2]; % list of results
+ResList = 1; % list of reservoirs
+RoutesList = []; % list of routes, put to [] for not plotting route states
+ResuList = [1]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
-AccRange = [0 400]; % [veh]
-FlowRange = [0 3]; % [veh/s]
+AccRange = [0 1000]; % [veh]
+FlowRange = [0 2]; % [veh/s]
 PlotResTotalVal = 1; % 1: plot reservoir total states / 0: plot route states only
 PlotResInternalDyn = 0; % 1: add plots of internal state (debug) / 0: do not add anything (better when plotting several results)
 filename = 'test'; % name for printing
@@ -256,12 +236,13 @@ Nresu = length(ResuList); % number of results
 % Color and line options
 sline = arrayextension(line_perso,Nresu,'column'); % line styles for results
 LW = 2*ones(1,Nresu); % line widths for results
-clight = linspace(0,(Nresu-1)/Nresu,Nresu); % color brightness (0 to 1) for results
+% clight = linspace(0,(Nresu-1)/Nresu,Nresu); % color brightness (0 to 1) for results
+clight = zeros(1,Nresu); % color brightness (0 to 1) for results
 cmap = arrayextension(cmap_perso2,Nplot,'row'); % colors for routes
-color0 = [0 0 0]; % color for total values (sum over the routes)
+cmap0 = arrayextension(cmap_perso2,Nplot,'row'); % color for total values (sum over the routes)
 
 % Figure and subfigure options
-Ncol = 2; % number of columns in the figure
+Ncol = 1; % number of columns in the figure
 Nrow = (floor(Nfig/Ncol) < Nfig/Ncol).*(floor(Nfig/Ncol) + 1) + (floor(Nfig/Ncol) == Nfig/Ncol).*floor(Nfig/Ncol);
 [colindex, rowindex] = ind2sub([Ncol Nrow],1:Nfig);
 marginleft = 0.1; % figure relative left margin
@@ -288,7 +269,7 @@ for ifig = 1:Nfig
         Temp_ntot = Results(ResuList(iresu)).Reservoir(ResList(ifig)).Acc;
         if PlotResTotalVal == 1
             hp01(iresu) = plot(Temp_t,Temp_ntot,...
-                'linestyle',sline{iresu},'color',lightencolor(color0,clight(iresu)),'linewidth',LW(iresu));
+                'linestyle',sline{iresu},'color',lightencolor(cmap0(iresu,:),clight(iresu)),'linewidth',LW(iresu));
             strleg01{iresu} = [Results(ResuList(iresu)).Name2 ' Total'];
         end
         for iplot = 1:Nplot
@@ -372,13 +353,13 @@ for ifig = 1:Nfig
         Temp_Pc = Results(ResuList(iresu)).Reservoir(ResList(ifig)).MaxProd;
         if PlotResTotalVal == 1
             hp01(iresu) = plot(Temp_t,Temp_qintot,...
-                'linestyle',sline{iresu},'color',lightencolor(color0,clight(iresu)),'linewidth',LW(iresu));
+                'linestyle',sline{iresu},'color',lightencolor(cmap0(iresu,:),clight(iresu)),'linewidth',LW(iresu));
             strleg01{iresu} = [Results(ResuList(iresu)).Name2 ' Total'];
             if PlotResInternalDyn == 1
                 plot(Temp_t,Temp_ntot./Temp_Lavg.*Temp_V,...
-                    'linestyle','--','color',lightencolor(color0,0.4),'linewidth',3);
+                    'linestyle','--','color',lightencolor(cmap0(iresu,:),0.4),'linewidth',3);
                 plot(Temp_t,Temp_Pc./Temp_Lavg,...
-                    'linestyle',':','color',lightencolor(color0,0.6),'linewidth',5);
+                    'linestyle',':','color',lightencolor(cmap0(iresu,:),0.6),'linewidth',5);
             end
         end
         for iplot = 1:Nplot
@@ -472,13 +453,13 @@ for ifig = 1:Nfig
         Temp_Pc = Results(ResuList(iresu)).Reservoir(ResList(ifig)).MaxProd;
         if PlotResTotalVal == 1
             hp01(iresu) = plot(Temp_t,Temp_qouttot,...
-                'linestyle',sline{iresu},'color',lightencolor(color0,clight(iresu)),'linewidth',LW(iresu));
+                'linestyle',sline{iresu},'color',lightencolor(cmap0(iresu,:),clight(iresu)),'linewidth',LW(iresu));
             strleg01{iresu} = [Results(ResuList(iresu)).Name2 ' Total'];
             if PlotResInternalDyn == 1
                 plot(Temp_t,Temp_ntot./Temp_Lavg.*Temp_V,...
-                    'linestyle','--','color',lightencolor(color0,0.4),'linewidth',3);
+                    'linestyle','--','color',lightencolor(cmap0(iresu,:),0.4),'linewidth',3);
                 plot(Temp_t,Temp_Pc./Temp_Lavg,...
-                    'linestyle',':','color',lightencolor(color0,0.6),'linewidth',5);
+                    'linestyle',':','color',lightencolor(cmap0(iresu,:),0.6),'linewidth',5);
             end
         end
         for iplot = 1:Nplot
@@ -559,11 +540,11 @@ set(gcf,'Position',[10 10 1000 700])
 FS = 16; % font size
 
 % Plot options
-ResList = [1 2 3 4]; % list of reservoirs
-ResuList = [1 2]; % list of results
+ResList = 1; % list of reservoirs
+ResuList = [1]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
-AccRange = [0 400]; % [veh]
-FlowRange = [0 3]; % [veh/s]
+AccRange = [0 1000]; % [veh]
+FlowRange = [0 2]; % [veh/s]
 filename = 'test'; % name for printing
 Nplot = length(ResList); % number of plots per figure
 Nresu = length(ResuList); % number of results
@@ -678,7 +659,7 @@ figindex = 'abcdefghijklmnopqrstuvwxyz';
 
 % Plot options
 RoutesList = 1:NumRoutes; % list of routes
-ResuList = [1 2]; % list of results
+ResuList = [1]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
 FlowRange = [0 2]; % [veh/s]
 filename = 'test'; % name for printing
@@ -780,7 +761,7 @@ figindex = 'abcdefghijklmnopqrstuvwxyz';
 
 % Plot options
 ODList = [1]; % list of OD
-ResuList = [1 2]; % list of results
+ResuList = [1]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
 FlowRange = [0 3]; % [veh/s]
 filename = 'test'; % name for printing

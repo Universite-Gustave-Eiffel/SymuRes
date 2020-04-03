@@ -1,6 +1,6 @@
-%% Scenario 1: one trip, demand peak
+%% Scenario 2: one trip, supply reduction
 %--------------------------------------------------------------------------
-% Fig. 4.a1.b1.c1 (section 2.3) of Mariotte & Leclercq (Part B 2019)
+% Fig. 4.a2.b2.c2 (section 2.3) of Mariotte & Leclercq (Part B 2019)
 
 Assignment.Periods = [0 Simulation.Duration];
 Assignment.PredefRoute = 1;
@@ -25,19 +25,19 @@ Route(iroute).NodePath = ODmacro(od0).PossibleRoute(1).NodePath;
 Route(iroute).TripLengths = ODmacro(od0).PossibleRoute(1).TripLengths;
 j = 1;
 Route(iroute).Demand0(j).Purpose = 'cartrip';
-Td1 = 1000;
-Td2 = 6000;
-q0 = 0.3;
-q1 = 1.3;
-q2 = 0.3;
-qinD = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
-Route(iroute).Demand0(j).Time = [0 Td1:20:(Td2+20)]; % [s]
-Route(iroute).Demand0(j).Data = [q0 qinD(Td1:20:Td2) q2]; % [veh/s]
+Route(iroute).Demand0(j).Time = 0; % [s]
+Route(iroute).Demand0(j).Data = 0.7; % [veh/s]
 
 % Exit supply
 %--------------------------------------------------------------------------
 i = 3;
-MacroNode(i).Capacity.Time = 0; % [s]
-MacroNode(i).Capacity.Data = 0.7; % [veh/s]
+Td1 = 1000;
+Td2 = 6000;
+q0 = 1.2;
+q1 = 0.1;
+q2 = 1.2;
+qoutS = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
+MacroNode(i).Capacity.Time = [0 Td1:20:(Td2+20)]; % [s]
+MacroNode(i).Capacity.Data = [q0 qoutS(Td1:20:Td2) q2]; % [veh/s]
 
 
