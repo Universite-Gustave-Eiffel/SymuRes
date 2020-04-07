@@ -29,8 +29,8 @@ fontname = 'Times New Roman';
 %--------------------------------------------------------------------------
 iresu = 1;
 Results(iresu).Network = 'Braess'; % Choice of a network defined by user
-Results(iresu).Solver = 2; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC1'; % Simulation name
+Results(iresu).Solver = 1; % Choice of the solver. 1: accbased / 2: tripbased
+Results(iresu).Name = 'SC3'; % Simulation name
 Results(iresu).Name2 = 'acc-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -52,7 +52,7 @@ Results(iresu).ODmacro = ODmacro;
 iresu = 2;
 Results(iresu).Network = 'Braess'; % Choice of a network defined by user
 Results(iresu).Solver = 2; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC1_2'; % Simulation name
+Results(iresu).Name = 'SC3'; % Simulation name
 Results(iresu).Name2 = 'trip-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -244,7 +244,7 @@ ResList = [1 2 3 4]; % list of reservoirs
 RoutesList = [1 2]; % list of routes, put to [] for not plotting route states
 ResuList = [1 2]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
-AccRange = [0 1000]; % [veh]
+AccRange = [0 400]; % [veh]
 FlowRange = [0 3]; % [veh/s]
 PlotResTotalVal = 1; % 1: plot reservoir total states / 0: plot route states only
 PlotResInternalDyn = 0; % 1: add plots of internal state (debug) / 0: do not add anything (better when plotting several results)
