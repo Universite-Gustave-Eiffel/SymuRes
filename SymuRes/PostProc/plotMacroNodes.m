@@ -19,7 +19,6 @@ function plotMacroNodes(Link,Reservoir,ResList,coloringres,MacroNode,NodesList,s
 %                      'linewidth', 'colormap', 'rescolor', 'textcolor',
 %                      'plotlegend', 'plotnumnodes'
 
-NbL = length(Link);
 NbR = length(ResList);
 NbN = length(NodesList);
 NbRoutes = length(RoutesList);
@@ -98,15 +97,24 @@ hold on
 
 % Plot the links
 if ~isempty(Link)
-    xLinks = zeros(1,2*NbL);
-    yLinks = zeros(1,2*NbL);
-    for k = 1:NbL
-        colorLink = 0.5*[1 1 1];
-        plot(Link(k).Points(1,:),Link(k).Points(2,:),'-','Color',colorLink,'LineWidth',LW);
-        xLinks(1+2*(k-1)) = Link(k).Points(1,1);
-        xLinks(2*k) = Link(k).Points(1,2);
-        yLinks(1+2*(k-1)) = Link(k).Points(2,1);
-        yLinks(2*k) = Link(k).Points(2,2);
+    Npts = 0;
+    for r = ResList
+        for k = Reservoir(r).LinksID
+            colorLink = 0.5*[1 1 1];
+            plot(Link(k).Points(1,:),Link(k).Points(2,:),'-','Color',colorLink,'LineWidth',LW);
+            Npts = Npts + length(Link(k).Points(1,:));
+        end
+    end
+    xLinks = zeros(1,Npts);
+    yLinks = zeros(1,Npts);
+    i = 1;
+    for r = ResList
+        for k = Reservoir(r).LinksID
+            Nk = length(Link(k).Points(1,:));
+            xLinks(i:(i+Nk-1)) = Link(k).Points(1,:);
+            yLinks(i:(i+Nk-1)) = Link(k).Points(2,:);
+            i = i + Nk;
+        end
     end
 else
     % Case when the reservoir borders are defined but not the link network
