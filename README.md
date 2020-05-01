@@ -3,6 +3,8 @@ A Multi-Reservoir MFD-Based Traffic Simulation Platform
 
 Version 1.0 - 2019
 
+![Image](img_symures.png "image")
+
 License
 -------
 SymuRes is licensed under the terms of the GNU GPL v3 license.
