@@ -12,9 +12,6 @@ function plotResNetAcc(t,Link,Reservoir,ResList,SimulTime,colorscheme,opts)
 %---- opts        : options, structure with fields 'fontname', 'fontsize',
 %                   'linewidth', 'title', 'legloc'
 
-NbL = length(Link);
-NbR = length(ResList);
-
 % timeID = floor(t/TimeStep) + 1; % index of the current time
 timeID = findindex(SimulTime,t); % index of the current time
 
@@ -75,11 +72,13 @@ if ~isempty(Link)
     xLinks = zeros(1,Npts);
     yLinks = zeros(1,Npts);
     i = 1;
-    for k = 1:NbL
-        Nk = length(Link(k).Points(1,:));
-        xLinks(i:(i+Nk-1)) = Link(k).Points(1,:);
-        yLinks(i:(i+Nk-1)) = Link(k).Points(2,:);
-        i = i + Nk;
+    for r = ResList
+        for k = Reservoir(r).LinksID
+            Nk = length(Link(k).Points(1,:));
+            xLinks(i:(i+Nk-1)) = Link(k).Points(1,:);
+            yLinks(i:(i+Nk-1)) = Link(k).Points(2,:);
+            i = i + Nk;
+        end
     end
 else
     % Case when the reservoir borders are defined but not the link network

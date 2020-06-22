@@ -11,7 +11,7 @@ function plotResBallConfig(Reservoir,ResList,plotborders,ResRadius,coordscale,op
 %---- opts        : options, structure with fields 'fontname', 'fontsize',
 %                   'linewidth', 'colormap', 'textcolor'
 
-NumRes = length(ResList);
+NbR = length(ResList);
 
 % Options
 if isfield(opts,'fontname')
@@ -41,7 +41,7 @@ else
 end
 
 % Reservoir colors
-ResAdj = cell(1,NumRes);
+ResAdj = cell(1,NbR);
 for r = ResList
     ResAdj{r} = intersect(Reservoir(r).AdjacentRes,ResList);
 end
@@ -49,8 +49,8 @@ colorRes = vertexcoloring(ResAdj,length(cmap(:,1)));
 
 flowspac = 0; % 0.2; % spacing between flow lines
 
-xlist = zeros(1,NumRes);
-ylist = zeros(1,NumRes);
+xlist = zeros(1,NbR);
+ylist = zeros(1,NbR);
 
 % Normalization of reservoir coordinates
 x0 = Reservoir(ResList(1)).Centroid(1);
@@ -58,6 +58,7 @@ y0 = Reservoir(ResList(1)).Centroid(2);
 x1 = Reservoir(Reservoir(ResList(1)).AdjacentRes(1)).Centroid(1);
 y1 = Reservoir(Reservoir(ResList(1)).AdjacentRes(1)).Centroid(2);
 dx0 = max([abs(x1 - x0) abs(y1 - y0)]);
+dx0 = (0 < dx0)*dx0 + (0 == dx0)*1;
 
 hold on
 
@@ -88,7 +89,7 @@ for r = ResList
     ylist(r) = yr;
     
     % Plot flow exchanges
-    if r < NumRes % to avoid flow line duplication
+    if r < NbR % to avoid flow line duplication
         for r2 = Reservoir(r).AdjacentRes
             if r2 > r && ismember(r2,ResList) % to avoid flow line duplication
                 xj = coordscale(1)*(Reservoir(r2).Centroid(1) - x0)/dx0;

@@ -15,7 +15,7 @@ function plotResBallAccPerRoute(t,Reservoir,ResList,Route,RoutesList,SimulTime,R
 %---- opts        : options, structure with fields 'fontname', 'fontsize',
 %                   'colormap', 'textcolor', 'title', 'showleg', 'legloc'
 
-NumRes = length(ResList);
+NbR = length(ResList);
 NbRoutes = length(RoutesList);
 
 % timeID = floor(t/TimeStep) + 1; % index of the current time
@@ -67,8 +67,8 @@ flowspac = 0.2; % spacing between flow lines
 
 maxwidth = 30; % flow line max width
 
-xlist = zeros(1,NumRes);
-ylist = zeros(1,NumRes);
+xlist = zeros(1,NbR);
+ylist = zeros(1,NbR);
 
 % Normalization of reservoir coordinates
 x0 = Reservoir(ResList(1)).Centroid(1);
@@ -76,9 +76,10 @@ y0 = Reservoir(ResList(1)).Centroid(2);
 x1 = Reservoir(Reservoir(ResList(1)).AdjacentRes(1)).Centroid(1);
 y1 = Reservoir(Reservoir(ResList(1)).AdjacentRes(1)).Centroid(2);
 dx0 = max([abs(x1 - x0) abs(y1 - y0)]);
+dx0 = (0 < dx0)*dx0 + (0 == dx0)*1;
 
 % Define max flow for plotting purpose
-listmaxflow = zeros(1,NumRes);
+listmaxflow = zeros(1,NbR);
 for r = ResList
     if isempty(find(Reservoir(r).AvgTripLength == 0, 1))
         listmaxflow(r) = max(Reservoir(r).MaxProd./Reservoir(r).AvgTripLength);
@@ -91,6 +92,7 @@ hf = zeros(1,NbRoutes);
 strleg = cellstr(int2str(zeros(NbRoutes,1)));
 ileg = 1;
 LegList = [];
+i = 1;
 for r = ResList
     xr = coordscale(1)*(Reservoir(r).Centroid(1) - x0)/dx0;
     yr = coordscale(2)*(Reservoir(r).Centroid(2) - y0)/dx0;
@@ -98,7 +100,7 @@ for r = ResList
     ylist(r) = yr;
     
     % Plot flow exchanges
-    if r < NumRes % to avoid flow line duplication
+    if i < NbR % to avoid flow line duplication
         for r2 = Reservoir(r).AdjacentRes
             if r2 > r && ismember(r2,ResList) % to avoid flow line duplication
                 xr2 = coordscale(1)*(Reservoir(r2).Centroid(1) - x0)/dx0;
@@ -142,8 +144,8 @@ for r = ResList
     angstart = 0;
     k_r = 1;
     for iroute = RoutesList
-        i_r = find(Reservoir(r).RoutesID == iroute);
-        if ~isempty(i_r)
+        i_r = Route(iroute).ResRouteIndex(r);
+        if ~isempty(i_r) && i_r > 0
             accratio = Reservoir(r).AccPerRoute(i_r,timeID)/Reservoir(r).MaxAcc;
             angend = angstart + accratio*2*pi;
             th = angstart:0.01:angend;
@@ -164,6 +166,8 @@ for r = ResList
     
     text(xr,yr,{['{\itR}_{' int2str(r) '}']; int2str(round(Reservoir(r).Acc(timeID)))},...
         'HorizontalAlignment','center','color',txtcolor,'FontName',fontname,'FontWeight','Bold','FontSize',FS)
+    
+    i = i + 1;
 end
 
 % Plot size

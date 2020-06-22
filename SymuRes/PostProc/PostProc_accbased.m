@@ -177,6 +177,9 @@ end
 %     Route(iroute).TravelTime(NumTimes) = Route(iroute).TravelTime(NumTimes-1);
 % end
 
+% Dummy Vehicle structure
+Vehicle = [];
+
 
 clear Temp_*
 

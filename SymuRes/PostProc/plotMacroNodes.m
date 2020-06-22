@@ -16,10 +16,9 @@ function plotMacroNodes(Link,Reservoir,ResList,coloringres,MacroNode,NodesList,s
 %---- RoutesList     : vector, route IDs
 %---- coloringroutes : boolean, 1: different colors for the routes
 %---- opts           : options, structure with fields 'fontname', 'fontsize',
-%                      'linewidth', 'colormap', 'rescolor', 'textcolor',
-%                      'plotlegend', 'plotnumnodes'
+%                      'linewidth','markersize', 'colormap', 'rescolor', 'textcolor',
+%                      'plotlegend', 'plotnumnodes', 'exactsmooth'
 
-NbL = length(Link);
 NbR = length(ResList);
 NbN = length(NodesList);
 NbRoutes = length(RoutesList);
@@ -39,6 +38,11 @@ if isfield(opts,'linewidth')
     LW = opts.linewidth;
 else
     LW = 2; % default
+end
+if isfield(opts,'markersize')
+    MS = opts.markersize;
+else
+    MS = 10; % default
 end
 if isfield(opts,'colormap')
     cmap0 = opts.colormap;
@@ -65,6 +69,11 @@ if isfield(opts,'plotnumnodes')
 else
     plotnumnodes = 0; % default
 end
+if isfield(opts,'exactsmooth')
+    exactsmooth = opts.exactsmooth;
+else
+    exactsmooth = 1; % default
+end
 
 % Lines
 line0 = {'-', '--', ':', '-.'};
@@ -72,8 +81,8 @@ line0 = {'-', '--', ':', '-.'};
 minLW = 0.2;
 maxLW = 5;
 % Marker size
-minMS = 5;
-maxMS = 30;
+minMS = 0.5*MS;
+maxMS = 3*MS;
 
 % Reservoir colors
 if coloringres == 1
@@ -98,15 +107,24 @@ hold on
 
 % Plot the links
 if ~isempty(Link)
-    xLinks = zeros(1,2*NbL);
-    yLinks = zeros(1,2*NbL);
-    for k = 1:NbL
-        colorLink = 0.5*[1 1 1];
-        plot(Link(k).Points(1,:),Link(k).Points(2,:),'-','Color',colorLink,'LineWidth',LW);
-        xLinks(1+2*(k-1)) = Link(k).Points(1,1);
-        xLinks(2*k) = Link(k).Points(1,2);
-        yLinks(1+2*(k-1)) = Link(k).Points(2,1);
-        yLinks(2*k) = Link(k).Points(2,2);
+    Npts = 0;
+    for r = ResList
+        for k = Reservoir(r).LinksID
+            colorLink = 0.5*[1 1 1];
+            plot(Link(k).Points(1,:),Link(k).Points(2,:),'-','Color',colorLink,'LineWidth',LW);
+            Npts = Npts + length(Link(k).Points(1,:));
+        end
+    end
+    xLinks = zeros(1,Npts);
+    yLinks = zeros(1,Npts);
+    i = 1;
+    for r = ResList
+        for k = Reservoir(r).LinksID
+            Nk = length(Link(k).Points(1,:));
+            xLinks(i:(i+Nk-1)) = Link(k).Points(1,:);
+            yLinks(i:(i+Nk-1)) = Link(k).Points(2,:);
+            i = i + Nk;
+        end
     end
 else
     % Case when the reservoir borders are defined but not the link network
@@ -173,9 +191,16 @@ for iroute = RoutesList
         xpath = xn + 0.7*d.*th./thmax.*cos(th);
         ypath = yn + 0.7*d.*th./thmax.*sin(th);
     else
-        alpha1 = 0.5; % for way-back turns
-        alpha2 = 1.7; % for direct turns
-        [xpath, ypath] = smoothroute(listx,listy,50,alpha1,alpha2);
+        if exactsmooth == 0
+            % The smoothed route does not necessarily connect all the points
+            alpha1 = 0.5; % for way-back turns
+            alpha2 = 1.7; % for direct turns
+            [xpath, ypath] = smoothroute(listx,listy,50,alpha1,alpha2);
+        else
+            % The smoothed route connects all the points (exact interpolation)
+            tension = 0.5; % smooth coeff
+            [xpath, ypath] = smoothroute2(listx,listy,50,tension);
+        end
     end
     LWroute = minLW + (routedem(i) - mindem)/(maxdem - mindem)*(maxLW - minLW);
     LWroute = max([LWroute minLW]);
@@ -190,9 +215,9 @@ end
 color1 = cmap0(3,:);
 color2 = cmap0(1,:);
 color3 = cmap0(4,:);
-MS1 = 10;
-MS2 = 15;
-MS3 = 10;
+MS1 = MS;
+MS2 = 1.5*MS;
+MS3 = MS;
 entrynodeslist = [];
 exitnodeslist = [];
 bordernodeslist = [];

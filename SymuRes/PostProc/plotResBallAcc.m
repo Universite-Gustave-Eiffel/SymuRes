@@ -13,7 +13,7 @@ function plotResBallAcc(t,Reservoir,ResList,SimulTime,ResRadius,coordscale,color
 %---- opts        : options, structure with fields 'fontname', 'fontsize',
 %                   'title', 'showflows'
 
-NumRes = length(ResList);
+NbR = length(ResList);
 
 % timeID = floor(t/TimeStep) + 1; % index of the current time
 timeID = findindex(SimulTime,t); % index of the current time
@@ -57,8 +57,8 @@ flowspac = 0.2; % spacing between flow lines
 
 maxwidth = 30; % flow line max width
 
-xlist = zeros(1,NumRes);
-ylist = zeros(1,NumRes);
+xlist = zeros(1,NbR);
+ylist = zeros(1,NbR);
 
 % Normalization of reservoir coordinates
 x0 = Reservoir(ResList(1)).Centroid(1);
@@ -66,9 +66,10 @@ y0 = Reservoir(ResList(1)).Centroid(2);
 x1 = Reservoir(Reservoir(ResList(1)).AdjacentRes(1)).Centroid(1);
 y1 = Reservoir(Reservoir(ResList(1)).AdjacentRes(1)).Centroid(2);
 dx0 = max([abs(x1 - x0) abs(y1 - y0)]);
+dx0 = (0 < dx0)*dx0 + (0 == dx0)*1;
 
 % Define max flow for plotting purpose
-listmaxflow = zeros(1,NumRes);
+listmaxflow = zeros(1,NbR);
 for r = ResList
     if isempty(find(Reservoir(r).AvgTripLength == 0, 1))
         listmaxflow(r) = max(Reservoir(r).MaxProd./Reservoir(r).AvgTripLength);
@@ -77,6 +78,7 @@ end
 maxflow = max(listmaxflow);
 
 hold on
+i = 1;
 for r = ResList
     xr = coordscale(1)*(Reservoir(r).Centroid(1) - x0)/dx0;
     yr = coordscale(2)*(Reservoir(r).Centroid(2) - y0)/dx0;
@@ -84,7 +86,7 @@ for r = ResList
     ylist(r) = yr;
     
     % Plot flow exchanges
-    if r < NumRes % to avoid flow line duplication
+    if i < NbR % to avoid flow line duplication
         for r2 = Reservoir(r).AdjacentRes
             if r2 > r && ismember(r2,ResList) % to avoid flow line duplication
                 xr2 = coordscale(1)*(Reservoir(r2).Centroid(1) - x0)/dx0;
@@ -142,6 +144,8 @@ for r = ResList
     
     text(xr,yr,{['{\itR}_{' int2str(r) '}']; int2str(round(Reservoir(r).Acc(timeID)))},...
         'HorizontalAlignment','center','color',txtcolor,'FontName',fontname,'FontWeight','Bold','FontSize',FS)
+    
+    i = i + 1;
 end
 
 % Plot size
@@ -162,7 +166,7 @@ xmax = max(xlist) + ResRadius + xborder*dx;
 ymin = min(ylist) - ResRadius - yborder*dy;
 ymax = max(ylist) + ResRadius + yborder*dy;
 
-text((xmin+xmax)/2,ymax,tlabel,...
+text((xmin+xmax)/2,ymax,tlabel,'color',[0.5 0.5 0.5],...
     'HorizontalAlignment','center','VerticalAlignment','top','FontName',fontname,'FontSize',FS)
 hold off
 axis([xmin xmax ymin ymax])

@@ -182,6 +182,7 @@ for r = 1:NumRes
     Reservoir(r).NinPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).NinPerRoute;
     Reservoir(r).NoutPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).NoutPerRoute;
     
+    Temp_sumavgtriplength = 1./Simulation.TripbasedSimuFactor.*Temp_sumavgtriplength;
     Temp_countavgtriplength = 1./Simulation.TripbasedSimuFactor.*Temp_countavgtriplength;
 end
 
@@ -399,6 +400,22 @@ if Assignment.PredefRoute == 0
     end
 end
 
+% for r = 1:NumRes
+%     for i = 2:Global.NumEvents
+%         if Reservoir(r).InflowSupply(i) == 0
+%             Reservoir(r).InflowSupply(i) = Reservoir(r).InflowSupply(i-1);
+%         end
+%         if Reservoir(r).EntryTripLength(i) == 0
+%             Reservoir(r).EntryTripLength(i) = Reservoir(r).EntryTripLength(i-1);
+%         end
+%         if Reservoir(r).ProdSupply(i) == 0
+%             Reservoir(r).ProdSupply(i) = Reservoir(r).ProdSupply(i-1);
+%         end
+%     end
+%     Reservoir(r).InflowSupply = 1./Simulation.TripbasedSimuFactor.*resamp(SimulTime,Global.SimulTime,Reservoir(r).InflowSupply(1:length(Global.SimulTime)));
+%     Reservoir(r).EntryTripLength = resamp(SimulTime,Global.SimulTime,Reservoir(r).EntryTripLength(1:length(Global.SimulTime)));
+%     Reservoir(r).ProdSupply = 1./Simulation.TripbasedSimuFactor.*resamp(SimulTime,Global.SimulTime,Reservoir(r).ProdSupply(1:length(Global.SimulTime)));
+% end
 
 clear Temp_*
 
