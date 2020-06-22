@@ -80,6 +80,14 @@ if Assignment.PredefRoute == 0
                 iroute = iroute + 1;
             end
         end
+        
+        % Sample demand to the simulation timestep (for the accbased solver)
+        for j = 1:length(ODmacro(od).Demand)
+            Temp_times = ODmacro(od).Demand(j).Time;
+            Temp_data = ODmacro(od).Demand(j).Data;
+            [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
+            ODmacro(od).Demand(j).Data2 = Temp_data; % demand sampled to the simulation timestep
+        end
     end
     
     % Number of routes

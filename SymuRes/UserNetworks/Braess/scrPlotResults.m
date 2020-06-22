@@ -30,7 +30,7 @@ fontname = 'Times New Roman';
 iresu = 1;
 Results(iresu).Network = 'Braess'; % Choice of a network defined by user
 Results(iresu).Solver = 1; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC3'; % Simulation name
+Results(iresu).Name = 'SC21'; % Simulation name
 Results(iresu).Name2 = 'acc-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -52,7 +52,7 @@ Results(iresu).ODmacro = ODmacro;
 iresu = 2;
 Results(iresu).Network = 'Braess'; % Choice of a network defined by user
 Results(iresu).Solver = 2; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC3'; % Simulation name
+Results(iresu).Name = 'SC21'; % Simulation name
 Results(iresu).Name2 = 'trip-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -84,7 +84,7 @@ opts.colormap = cmap_perso2;
 plotResBallConfig(Results(iresu).Reservoir,1:NumRes,1,0.5,[1.5 1.5],opts)
 filename = '';
 set(gcf,'PaperUnits','Inches','PaperSize',[6 4],'PaperPosition',[0 0 6 4])
-print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_resconfig' filename '.pdf'])
+% print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_resconfig' filename '.pdf'])
 
 % Plot reservoir configuration, real network
 %--------------------------------------------------------------------------
@@ -145,20 +145,16 @@ plotResRouteDem([],Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,1:NumR
 % Plot route paths
 %--------------------------------------------------------------------------
 iresu = 1;
-RoutesList = [];
-for iroute = 1:NumRoutes
-    if Route(iroute).AssignCoeff > 0 && mean(Results(iresu).Route(iroute).Demand) > 0.0001
-        RoutesList = [RoutesList iroute];
-    end
-end
+RoutesList = 1:NumRoutes;
 figure
 opts.fontname = 'Arial';
 opts.fontsize = 18;
-opts.linewidth = 0.8;
+opts.linewidth = 1;
 opts.plotlegend = 1;
-plotRoutes([],Results(iresu).Reservoir,1:NumRes,0,Results(iresu).Route,RoutesList,1,0,opts)
-% filename = '';
-% set(gcf,'PaperSize',[11 9],'PaperPosition',[0 0 11 9])
+opts.nodepath = 1;
+plotRoutes([],Results(iresu).Reservoir,1:NumRes,0,MacroNode,1:NumMacroNodes,0,Results(iresu).Route,RoutesList,1,0,opts)
+% filename = ['_' Results(iresu).Name];
+% set(gcf,'PaperUnits','inches','PaperSize',[6 4],'PaperPosition',[0 0 6 4])
 % print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_routes' filename '.pdf'])
 
 % Plot macro nodes
@@ -173,7 +169,7 @@ opts.plotnumnodes = 1;
 MacroNodesList = 1:NumMacroNodes;
 plotMacroNodes([],Results(iresu).Reservoir,1:NumRes,0,MacroNode,MacroNodesList,0,Results(iresu).Route,[],0,opts)
 % filename = '';
-% set(gcf,'PaperSize',[11 9],'PaperPosition',[0 0 11 9])
+% set(gcf,'PaperUnits','inches','PaperSize',[6 4],'PaperPosition',[0 0 6 4])
 % print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_macronodes' filename '.pdf'])
 
 % Plot macro nodes with route paths
@@ -186,14 +182,15 @@ for iroute = 1:NumRoutes
 end
 figure
 opts.fontname = 'Arial';
-opts.fontsize = 18;
+opts.fontsize = 20;
 opts.linewidth = 0.8;
-opts.plotlegend = 1;
+opts.plotlegend = 0;
 opts.colormap = cmap_perso2;
 opts.plotnumnodes = 0;
-plotMacroNodes([],Results(iresu).Reservoir,1:NumRes,1,MacroNode,1:NumMacroNodes,1,Results(iresu).Route,RoutesList,0,opts)
-% filename = '_routes';
-% set(gcf,'PaperUnits','inches','PaperSize',[11 9],'PaperPosition',[0 0 11 9])
+opts.exactsmooth = 1;
+plotMacroNodes([],Results(iresu).Reservoir,1:NumRes,1,MacroNode,1:NumMacroNodes,0,Results(iresu).Route,RoutesList,0,opts)
+% filename = ['_' Results(iresu).Name];
+% set(gcf,'PaperUnits','inches','PaperSize',[6 4],'PaperPosition',[0 0 6 4])
 % print('-painters','-dpdf',['UserNetworks/' Results(iresu).Network '/img/' Results(iresu).Network '_macronodes' filename '.pdf'])
 
 
@@ -224,8 +221,8 @@ for i = 1:Nframes
     opts.title = ['\bft = ' num2str(t0) ' s'];
     opts.showleg = 1;
     %plotResBallAcc(t0,Results(iresu).Reservoir,1:NumRes,Results(iresu).SimulTime,0.5,[1.5 1.5],'trafficolor',opts)
-    %plotResBallAccPerRoute(t0,Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,1:NumRoutes,Results(iresu).SimulTime,0.5,[1.5 1.5],opts)
-    plotResNetAcc(t0,[],Results(iresu).Reservoir,1:NumRes,Results(iresu).SimulTime,'trafficolor',opts)
+    plotResBallAccPerRoute(t0,Results(iresu).Reservoir,1:NumRes,Results(iresu).Route,1:NumRoutes,Results(iresu).SimulTime,0.5,[1.5 1.5],opts)
+    %plotResNetAcc(t0,[],Results(iresu).Reservoir,1:NumRes,Results(iresu).SimulTime,'trafficolor',opts)
     pause(0.001)
     %pause
 end
@@ -235,27 +232,28 @@ end
 %% Accumulation, inflow and outflow
 %--------------------------------------------------------------------------
 
-FS = 16; % font size
-FS1 = 16; % title font size
+FS = 9; % font size
+FS1 = 11; % title font size
 figindex = 'abcdefghijklmnopqrstuvwxyz';
+PrintFig = 0; % 1: print the figure (save as pdf in the img folder) / 0: do not print
+filename = Results(iresu).Name; % name for printing
 
 % Plot options
 ResList = [1 2 3 4]; % list of reservoirs
 RoutesList = [1 2]; % list of routes, put to [] for not plotting route states
 ResuList = [1 2]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
-AccRange = [0 400]; % [veh]
-FlowRange = [0 3]; % [veh/s]
+AccRange = [0 1000]; % [veh]
+FlowRange = [0 2]; % [veh/s]
 PlotResTotalVal = 1; % 1: plot reservoir total states / 0: plot route states only
 PlotResInternalDyn = 0; % 1: add plots of internal state (debug) / 0: do not add anything (better when plotting several results)
-filename = 'test'; % name for printing
 Nfig = length(ResList); % number of subfigures
 Nplot = length(RoutesList); % number of plots per subfigure
 Nresu = length(ResuList); % number of results
 
 % Color and line options
 sline = arrayextension(line_perso,Nresu,'column'); % line styles for results
-LW = 2*ones(1,Nresu); % line widths for results
+LW = 1*ones(1,Nresu); % line widths for results
 clight = linspace(0,(Nresu-1)/Nresu,Nresu); % color brightness (0 to 1) for results
 cmap = arrayextension(cmap_perso2,Nplot,'row'); % colors for routes
 color0 = [0 0 0]; % color for total values (sum over the routes)
@@ -346,11 +344,15 @@ for ifig = 1:Nfig
         set(hleg,'Position',[xj 0.01 legpos(3) legpos(4)])
     end
 end
-set(gcf,'Position',[10 10 1000 700])
 
-% set(gcf,'PaperUnits','inches')
-% set(gcf,'PaperSize',[figwidth figheight],'PaperPosition',[0 0 figwidth figheight])
-% print('-painters','-dpdf',['UserNetworks/' Results(1).Network '/img/' Results(iresu).Network '_acc_' filename '.pdf'])
+if PrintFig == 1
+    set(gcf,'PaperUnits','inches')
+    set(gcf,'PaperSize',[figwidth figheight],'PaperPosition',[0 0 figwidth figheight])
+    print('-painters','-dpdf',['UserNetworks/' Results(1).Network '/img/' Results(iresu).Network '_acc_' filename '.pdf'])
+else
+    set(gcf,'Position',[10 10 1000 700])
+end
+
 
 % Inflow
 %--------------------------------------------------------------------------
@@ -446,11 +448,15 @@ for ifig = 1:Nfig
         set(hleg,'Position',[xj 0.01 legpos(3) legpos(4)])
     end
 end
-set(gcf,'Position',[10 10 1000 700])
 
-% set(gcf,'PaperUnits','inches')
-% set(gcf,'PaperSize',[figwidth figheight],'PaperPosition',[0 0 figwidth figheight])
-% print('-painters','-dpdf',['UserNetworks/' Results(1).Network '/img/' Results(iresu).Network '_inflow_' filename '.pdf'])
+if PrintFig == 1
+    set(gcf,'PaperUnits','inches')
+    set(gcf,'PaperSize',[figwidth figheight],'PaperPosition',[0 0 figwidth figheight])
+    print('-painters','-dpdf',['UserNetworks/' Results(1).Network '/img/' Results(iresu).Network '_inflow_' filename '.pdf'])
+else
+    set(gcf,'Position',[10 10 1000 700])
+end
+
 
 % Outflow
 %--------------------------------------------------------------------------
@@ -546,11 +552,14 @@ for ifig = 1:Nfig
         set(hleg,'Position',[xj 0.01 legpos(3) legpos(4)])
     end
 end
-set(gcf,'Position',[10 10 1000 700])
 
-% set(gcf,'PaperUnits','inches')
-% set(gcf,'PaperSize',[figwidth figheight],'PaperPosition',[0 0 figwidth figheight])
-% print('-painters','-dpdf',['UserNetworks/' Results(1).Network '/img/' Results(iresu).Network '_outflow_' filename '.pdf'])
+if PrintFig == 1
+    set(gcf,'PaperUnits','inches')
+    set(gcf,'PaperSize',[figwidth figheight],'PaperPosition',[0 0 figwidth figheight])
+    print('-painters','-dpdf',['UserNetworks/' Results(1).Network '/img/' Results(iresu).Network '_outflow_' filename '.pdf'])
+else
+    set(gcf,'Position',[10 10 1000 700])
+end
 
 
 %% Total accumulation and inflow/outflow in reservoirs
@@ -830,10 +839,10 @@ set(gcf,'Position',[10 10 1000 500])
 FS = 16; % font size
 
 % Plot options
-RoutesList = [1 2]; % list of routes
+RoutesList = [1 2 3 4]; % list of routes
 ResuList = [1 2]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
-TTRange = [0 500]; % [s]
+TTRange = [0 1000]; % [s]
 PlotFreeflowTT = 0; % 1: add free-flow TT / 0: do not add (better when plotting several results)
 filename = 'test'; % name for printing
 Nplot = length(RoutesList); % number of plots per figure
@@ -861,7 +870,7 @@ for iresu = 1:Nresu
         end
         hp1(i) = plot(Temp_t,Temp_TT,...
             'linestyle',sline{iresu},'color',lightencolor(cmap(iplot,:),clight(iresu)),'linewidth',LW(iresu));
-        strleg{i} = [Results(ResuList(iresu)).Name2 ' Route ' int2str(RoutesList(iplot)) ': [' int2str(Route(RoutesList(iplot)).ResPath) ']'];
+        strleg{i} = [Results(ResuList(iresu)).Name2 ' Route ' int2str(RoutesList(iplot)) ': [' int2str(Results(ResuList(iresu)).Route(RoutesList(iplot)).ResPath) ']'];
         i = i + 1;
     end
 end

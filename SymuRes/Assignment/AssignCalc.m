@@ -20,10 +20,6 @@ if Assignment.CurrentPeriodID > 1
     Route = Snapshot.Route;
 end
 
-% Assignment period time window
-% Temp_StartTimeID = floor(Assignment.CurrentTime/TimeStep) + 1;
-% Temp_EndTimeID = min([floor(Assignment.Periods(Assignment.CurrentPeriodID+1)/TimeStep) NumTimes-1]);
-
 Assignment.OldAssignCoeff = Assignment.NewAssignCoeff;
 
 % Calculation of the MSWA parameter at the current iteration
@@ -37,37 +33,50 @@ if Assignment.model == 3 || Assignment.model == 4
     Assignment.AL = zeros(1,NumODmacro);
 end
 
-for od = 1:NumODmacro % loop on all OD
-    % List of routes for the OD (o,d)
-    Temp_RouteIDs = ODmacro(od).RoutesID;
-    if ~isempty(Temp_RouteIDs)
-        % Apply a choice model to calculate the path flow distribution (assignment coefficients)
-        if Assignment.model < 100
-            % Choice model
-            ODflowdistrib = ChoiceModel(od,Temp_RouteIDs,Reservoir,Route,Assignment,Simulation);
-        else
-            % Empirical model
-            ODflowdistrib = EmpiricalModel(od,Temp_RouteIDs,Reservoir,Route,Assignment,Simulation);
-        end
-        Temp_coeffs = ODflowdistrib(Temp_RouteIDs);
-        Temp_oldcoeffs = Assignment.OldAssignCoeff(Temp_RouteIDs);
-        
-        % MSA step to update the assignment coefficients
-        % Classical MSA
-        Assignment.NewAssignCoeff(Temp_RouteIDs) = (1 - 1/Assignment.CurIteration).*Temp_oldcoeffs + 1/Assignment.CurIteration.*Temp_coeffs;
-        % Weighted MSA (MSWA)
-        Assignment.NewAssignCoeff(Temp_RouteIDs) = Temp_oldcoeffs + Temp_alphaMSWA.*(Temp_coeffs - Temp_oldcoeffs);
-        
-        for iroute = Temp_RouteIDs % loop on all routes for the OD (i,j)
-            Route(iroute).AssignCoeff = Assignment.NewAssignCoeff(iroute);
-            % Append the number of vehicles assigned to each route
-            Route(iroute).NVehicles = ODmacro(od).NVehicules*Assignment.NewAssignCoeff(iroute);
+if Assignment.PredefRoute == 0
+    % If the routes are calculated by the assignment procedure
+    %---------------------------------------------------------
+    
+    for od = 1:NumODmacro % loop on all OD
+        % List of routes for the OD (o,d)
+        Temp_RouteIDs = ODmacro(od).RoutesID;
+        if ~isempty(Temp_RouteIDs)
+            % Apply a choice model to calculate the path flow distribution (assignment coefficients)
+            if Assignment.model < 100
+                % Choice model
+                ODflowdistrib = ChoiceModel(od,Temp_RouteIDs,Reservoir,Route,Assignment,Simulation);
+            else
+                % Empirical model
+                ODflowdistrib = EmpiricalModel(od,Temp_RouteIDs,Reservoir,Route,Assignment,Simulation);
+            end
+            Temp_coeffs = ODflowdistrib(Temp_RouteIDs);
+            Temp_oldcoeffs = Assignment.OldAssignCoeff(Temp_RouteIDs);
+            
+            % MSA step to update the assignment coefficients
+            % Classical MSA
+            Assignment.NewAssignCoeff(Temp_RouteIDs) = (1 - 1/Assignment.CurIteration).*Temp_oldcoeffs + 1/Assignment.CurIteration.*Temp_coeffs;
+            % Weighted MSA (MSWA)
+            Assignment.NewAssignCoeff(Temp_RouteIDs) = Temp_oldcoeffs + Temp_alphaMSWA.*(Temp_coeffs - Temp_oldcoeffs);
+            
+            for iroute = Temp_RouteIDs % loop on all routes for the OD (i,j)
+                % Assignment coefficient
+                Route(iroute).AssignCoeff = Assignment.NewAssignCoeff(iroute);
+                % Route demand
+                for j = 1:length(ODmacro(od).Demand)
+                    if strcmp(ODmacro(od).Demand(j).Purpose,'cartrip')
+                        Route(iroute).Demand = Route(iroute).AssignCoeff.*ODmacro(od).Demand(j).Data2; % row vector
+                    end
+                end
+                % Append the number of vehicles assigned to each route
+                Route(iroute).NVehicles = ODmacro(od).NVehicules*Route(iroute).AssignCoeff;
+            end
         end
     end
-end
-
-% In case of predefined routes, no assignment
-if Assignment.PredefRoute == 1
+    
+else
+    % If the routes with their demand are given prior to the simulation
+    %------------------------------------------------------------------
+    
     for od = 1:NumODmacro
         Temp_demtot = 0;
         for iroute = ODmacro(od).RoutesID

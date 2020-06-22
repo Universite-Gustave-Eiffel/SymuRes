@@ -26,7 +26,7 @@ for i = 1:Nelem
         end
     end
     if isnewlist == 1
-        % if a new list has been opened, search for similar paths
+        % if a new list has been opened, search for similar elements
         ilist = ilist + 1;
         indexlist{ilist} = [indexlist{ilist} i];
         if i < Nelem

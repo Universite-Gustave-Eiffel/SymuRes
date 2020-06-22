@@ -10,155 +10,89 @@ for od = 1:NumODmacro
     ODmacro(od).Demand(i).Data = 0; % [veh/s]
 end
 
+addpath(['UserNetworks/' Simulation.Network '/scenarios/'])
 
-%% Scenario 1: predefined routes
+
+%% Scenario 1: congestion on predefined routes, bottleneck at R3 exit
 %--------------------------------------------------------------------------
 
-% Assignment.Periods = [0 Simulation.Duration];
-% Assignment.PredefRoute = 1;
-% Assignment.Convergence = 0;
-% 
-% % [R1 R2 R4]
-% %--------------------------------------------------------------------------
-% iroute = 1;
-% for od = 1:NumODmacro
-%     if ODmacro(od).NodeOriginID == 1 && ODmacro(od).NodeDestinationID == 3
-%         od0 = od;
-%     end
-% end
-% Route(iroute).ODmacroID = od0;
-% Route(iroute).ResPath = ODmacro(od0).PossibleRoute(1).ResPath;
-% Route(iroute).NodePath = ODmacro(od0).PossibleRoute(1).NodePath;
-% Route(iroute).TripLengths = ODmacro(od0).PossibleRoute(1).TripLengths;
-% j = 1;
-% Route(iroute).Demand0(j).Purpose = 'cartrip';
-% Td1 = 500;
-% Td11 = 1000;
-% Td12 = 2000;
-% Td2 = 2500;
-% q0 = 0.35;
-% q1 = 1.1;
-% q2 = 0.35;
-% % qinD = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
-% qinD = @(t_) q0*trayfct(t_,Td1,Td11,Td12,Td2,q1/q0,q2/q0);
-% Route(iroute).Demand0(j).Time = [0 Td1:60:(Td2+60)]; % [s]
-% Route(iroute).Demand0(j).Data = [q0 qinD(Td1:60:Td2) q2]; % [veh/s]
-% 
-% % [R1 R2 R3 R4]
-% %--------------------------------------------------------------------------
-% iroute = 2;
-% for od = 1:NumODmacro
-%     if ODmacro(od).NodeOriginID == 1 && ODmacro(od).NodeDestinationID == 3
-%         od0 = od;
-%     end
-% end
-% Route(iroute).ODmacroID = od0;
-% Route(iroute).ResPath = ODmacro(od0).PossibleRoute(3).ResPath;
-% Route(iroute).NodePath = ODmacro(od0).PossibleRoute(3).NodePath;
-% Route(iroute).TripLengths = ODmacro(od0).PossibleRoute(3).TripLengths;
-% j = 1;
-% Route(iroute).Demand0(j).Purpose = 'cartrip';
-% Td1 = 500;
-% Td11 = 1000;
-% Td12 = 1500;
-% Td2 = 2000;
-% q0 = 0.2;
-% q1 = 0.9; %1.2;
-% q2 = 0.2;
-% % qinD = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
-% qinD = @(t_) q0*trayfct(t_,Td1,Td11,Td12,Td2,q1/q0,q2/q0);
-% Route(iroute).Demand0(j).Time = [0 Td1:60:(Td2+60)]; % [s]
-% Route(iroute).Demand0(j).Data = [q0 qinD(Td1:60:Td2) q2]; % [veh/s]
-% 
-% % [R1 R3 R4]
-% %--------------------------------------------------------------------------
-% iroute = 3;
-% for od = 1:NumODmacro
-%     if ODmacro(od).NodeOriginID == 1 && ODmacro(od).NodeDestinationID == 3
-%         od0 = od;
-%     end
-% end
-% Route(iroute).ODmacroID = od0;
-% Route(iroute).ResPath = ODmacro(od0).PossibleRoute(2).ResPath;
-% Route(iroute).NodePath = ODmacro(od0).PossibleRoute(2).NodePath;
-% Route(iroute).TripLengths = ODmacro(od0).PossibleRoute(2).TripLengths;
-% j = 1;
-% Route(iroute).Demand0(j).Purpose = 'cartrip';
-% Td1 = 500;
-% Td11 = 1000;
-% Td12 = 2000;
-% Td2 = 2500;
-% q0 = 0.1;
-% q1 = 0.2;
-% q2 = 0.1;
-% % qinD = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
-% qinD = @(t_) q0*trayfct(t_,Td1,Td11,Td12,Td2,q1/q0,q2/q0);
-% Route(iroute).Demand0(j).Time = [0 Td1:60:(Td2+60)]; % [s]
-% Route(iroute).Demand0(j).Data = [q0 qinD(Td1:60:Td2) q2]; % [veh/s]
-% 
-% MacroNode(9).Capacity.Time = [0 1000];
-% MacroNode(9).Capacity.Data = [10 0.4];
-
-
-%% Scenario 2: one assignment period
-%--------------------------------------------------------------------------
-
-% Assignment.Periods = [0 Simulation.Duration];
-% Assignment.Convergence = 1;
-% Assignment.PredefRoute = 0;
-% Assignment.model = 1; % DUE
-% Assignment.Behavior = 1; % rational
-% 
-% % R1 > R4
-% %--------------------------------------------------------------------------
-% for od = 1:NumODmacro
-%     if ODmacro(od).NodeOriginID == 1 && ODmacro(od).NodeDestinationID == 3
-%         od0 = od;
-%     end
-% end
-% i = 1;
-% ODmacro(od0).Demand(i).Purpose = 'cartrip';
-% Td1 = 1000;
-% Td11 = 1500;
-% Td12 = 2500;
-% Td2 = 3000;
-% q0 = 0.5;
-% q1 = 1.9; % 1.3;
-% q2 = 0.5;
-% % qinD = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
-% qinD = @(t_) q0*trayfct(t_,Td1,Td11,Td12,Td2,q1/q0,q2/q0);
-% ODmacro(od0).Demand(i).Time = [0 Td1:60:(Td2+60)]; % [s]
-% ODmacro(od0).Demand(i).Data = [q0 qinD(Td1:60:Td2) q2]; % [veh/s]
-
-
-%% Scenario 3: several assignment periods
-%--------------------------------------------------------------------------
-
-Assignment.Periods = [0 1000 2000 3000 4000 Simulation.Duration];
-Assignment.Convergence = 1;
-Assignment.PredefRoute = 0;
-Assignment.model = 1; % DUE
-Assignment.Behavior = 1; % rational
-
-% R1 > R4
-%--------------------------------------------------------------------------
-for od = 1:NumODmacro
-    if ODmacro(od).NodeOriginID == 1 && ODmacro(od).NodeDestinationID == 3
-        od0 = od;
-    end
+if strcmp(Simulation.Name(1:4),'SC11')
+    Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.4; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC1
 end
-i = 1;
-ODmacro(od0).Demand(i).Purpose = 'cartrip';
-Td1 = 1000;
-Td11 = 1500;
-Td12 = 2500;
-Td2 = 3000;
-q0 = 0.5;
-q1 = 1.9; % 1.3;
-q2 = 0.5;
-% qinD = @(t_) q0*bumpfct(t_,Td1,Td2,q1/q0,q2/q0);
-qinD = @(t_) q0*trayfct(t_,Td1,Td11,Td12,Td2,q1/q0,q2/q0);
-ODmacro(od0).Demand(i).Time = [0 Td1:60:(Td2+60)]; % [s]
-ODmacro(od0).Demand(i).Data = [q0 qinD(Td1:60:Td2) q2]; % [veh/s]
 
+if strcmp(Simulation.Name(1:4),'SC12')
+    Simulation.MergeModel = 'endogenous'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.4; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC1
+end
+
+if strcmp(Simulation.Name(1:4),'SC13')
+    Simulation.MergeModel = 'demfifo'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.4; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC1
+end
+
+
+%% Scenario 2: congestion on predefined routes, bottleneck at R4 exit
+%--------------------------------------------------------------------------
+
+if strcmp(Simulation.Name(1:4),'SC21')
+    Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.4; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC2
+end
+
+
+%% Scenario 3: DTA with several assignment periods
+%--------------------------------------------------------------------------
+% ! Low demand, thus does not work with a simufactor < 0.6 in the trip-based
+
+if strcmp(Simulation.Name(1:4),'SC31')
+    Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.7; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC3
+end
+
+
+%% Scenario 4: DTA with one assignment period
+%--------------------------------------------------------------------------
+
+if strcmp(Simulation.Name(1:4),'SC41')
+    Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.7; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC4
+end
+
+
+%% Scenario 5: DTA with heavy congestion
+%--------------------------------------------------------------------------
+
+if strcmp(Simulation.Name(1:4),'SC51')
+    Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.7; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC5
+end
+
+
+%% Scenario 6: Predefined assignment coeff with heavy congestion
+%--------------------------------------------------------------------------
+
+if strcmp(Simulation.Name(1:4),'SC61')
+    Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
+    Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
+    Simulation.TripbasedSimuFactor = 0.7; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+    DemSC6
+end
+
+
+rmpath(['UserNetworks/' Simulation.Network '/scenarios/'])
 
