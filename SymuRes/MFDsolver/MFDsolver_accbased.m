@@ -49,30 +49,12 @@ if Assignment.CurrentPeriodID == 1
         
         % Number of vehicles waiting to enter Rr when Rr is the begining of the route
         Reservoir(r).NumWaitingVeh = zeros(1,Temp_Nroutes);
+        
+        % Entry demand cumulative count for the FIFO merge
+        Reservoir(r).NinDemandPerRoute = zeros(Temp_Nroutes,NumTimes);
     end
     for iroute = 1:NumRoutes
         Route(iroute).TravelTime = zeros(1,NumTimes);
-    end
-    
-    % Demand and supply definition
-    for od = 1:NumODmacro
-        for j = 1:length(ODmacro(od).Demand)
-            Temp_times = ODmacro(od).Demand(j).Time;
-            Temp_data = ODmacro(od).Demand(j).Data;
-            [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
-            ODmacro(od).Demand(j).Data2 = Temp_data; % demand sampled to the simulation timestep
-        end
-    end
-    if Assignment.PredefRoute == 0
-        for iroute = 1:NumRoutes
-            Route(iroute).Demand = zeros(1,NumTimes);
-        end
-    end
-    for i = 1:NumMacroNodes
-        Temp_times = MacroNode(i).Capacity.Time;
-        Temp_data = MacroNode(i).Capacity.Data;
-        [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
-        MacroNode(i).Supply = Temp_data;
     end
     
 else
@@ -82,19 +64,13 @@ else
     
 end
 
-% Demand per route
-if Assignment.PredefRoute == 0
-    for iroute = 1:NumRoutes
-        od = Route(iroute).ODmacroID;
-        for j = 1:length(ODmacro(od).Demand)
-            if strcmp(ODmacro(od).Demand(j).Purpose,'cartrip')
-                Temp_demOD = ODmacro(od).Demand(j).Data2(Temp_StartTimeID:Temp_EndTimeID);
-                Route(iroute).Demand(Temp_StartTimeID:Temp_EndTimeID) = Route(iroute).AssignCoeff.*Temp_demOD; % row vector
-            end
-        end
-    end
+% Macro node supply
+for i = 1:NumMacroNodes
+    Temp_times = MacroNode(i).Capacity.Time;
+    Temp_data = MacroNode(i).Capacity.Data;
+    [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
+    MacroNode(i).Supply = Temp_data;
 end
-
 
 eps0 = 1e-3; % criterion to determine if there are vehicles in the waiting list [veh]
 eps1 = 1e-6; % criterion to determine if there is a difference in flow [veh/s]
@@ -170,23 +146,17 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             Reservoir(r).OutflowDemandPerRoute(i_r) = Temp_Orp;
             Reservoir(r).OutflowCircuPerRoute(i_r,itime) = Temp_Orp;
         end
+        
     end
     
-    for inode = 1:NumMacroNodes
-        Temp_controlsupply = 1e6;
-        if 2*3600 < SimulTime(itime) && SimulTime(itime) < 3*3600
-            Temp_controlsupply = 0.1;
-        end
-        if strcmp(MacroNode(inode).Type,'border') && ismember(MacroNode(inode).ResID(2),10)
-            MacroNode(inode).Supply(itime) = min([MacroNode(inode).Supply(itime) Temp_controlsupply]);
-        end
-    end
     
     % Inflow supply calculation
     %--------------------------
     for r = 1:NumRes % loop on all reservoirs
         
         % Inflow demand for all routes
+        Temp_Nroutes = length(Reservoir(r).RoutesID);
+        Temp_dem = zeros(1,Temp_Nroutes);
         i_r = 1;
         for iroute = Reservoir(r).RoutesID % loop on all routes in Rr
             if r == Route(iroute).ResOriginID % Rr origin of the route
@@ -196,20 +166,26 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
                     else
                         Reservoir(r).InflowDemandPerRoute(i_r) = MacroNode(Reservoir(r).RoutesNodeID(1,i_r)).Supply(itime);
                     end
+                    Temp_dem(i_r) = Route(iroute).Demand(itime);
                 else % internal origin
                     if Reservoir(r).NumWaitingVeh(i_r) < eps0
                         Reservoir(r).InflowDemandPerRoute(i_r) = Route(iroute).Demand(itime);
                     else
                         Reservoir(r).InflowDemandPerRoute(i_r) = MacroNode(Reservoir(r).RoutesNodeID(1,i_r)).Supply(itime);
                     end
+                    Temp_dem(i_r) = Route(iroute).Demand(itime);
                 end
             else % Rr middle of the route
                 r2 = Route(iroute).ResPath(Reservoir(r).RoutesPathIndex(i_r)-1); % previous reservoir in the route
                 i_r2 = Route(iroute).ResRouteIndex(r2);
                 Reservoir(r).InflowDemandPerRoute(i_r) = Reservoir(r2).OutflowDemandPerRoute(i_r2);
+                Temp_dem(i_r) = Reservoir(r2).OutflowDemandPerRoute(i_r2);
             end
             i_r = i_r + 1;
         end
+        
+        % Entry demand cumulative count (for FIFO merge)
+        Reservoir(r).NinDemandPerRoute(:,itime+1) = Reservoir(r).NinDemandPerRoute(:,itime) + Temp_dem'*TimeStep;
         
         % Effective inflow for internal origins (not restricted)
         Reservoir(r).InternalProd = 0;
@@ -224,7 +200,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
                 else
                     Temp_mergecoeff = ones(1,length(Temp_indexes));
                 end
-                Temp_inflow = mergeNd(Temp_dem,MacroNode(inode).Supply(itime),Temp_mergecoeff);
+                Temp_inflow = mergeFair(Temp_dem,MacroNode(inode).Supply(itime),Temp_mergecoeff);
                 Reservoir(r).InflowPerRoute(Temp_indexes,itime) = Temp_inflow';
                 Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
                 Reservoir(r).InternalProd = Reservoir(r).InternalProd + sum(Temp_Ltrip.*Temp_inflow);
@@ -240,7 +216,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             if Temp_nr_entry > 0
                 Reservoir(r).MergeCoeffPerRoute(Temp_indexes) = (Temp_nrp > 0).*Temp_nrp./Temp_nr_entry + (Temp_nrp <= 0).*1;
             end
-        elseif strcmp(Simulation.MergeModel,'demprorata')
+        elseif strcmp(Simulation.MergeModel,'demprorata') || strcmp(Simulation.MergeModel,'demfifo')
             % Demand pro-rata flow merge
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
             Temp_dem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
@@ -248,8 +224,6 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             if Temp_demtot > 0
                 Reservoir(r).MergeCoeffPerRoute(Temp_indexes) = Temp_dem./Temp_demtot;
             end
-        elseif strcmp(Simulation.MergeModel,'demfifo')
-            % TODO
         elseif strcmp(Simulation.MergeModel,'equiproba')
             % Equi-probability for all transfer inflows
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
@@ -265,11 +239,12 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             Temp_indexes = Reservoir(r).NodeRoutesIndex{i_n};
             if ~isempty(Temp_indexes)
                 Temp_flowdem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
+                Temp_flowsupply = MacroNode(inode).Supply(itime);
                 Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
                 Temp_mergecoefftot = sum(Temp_mergecoeff);
-                
-                Temp_newflowdem = mergeNd(Temp_flowdem,MacroNode(inode).Supply(itime),Temp_mergecoeff./Temp_mergecoefftot);
-                Reservoir(r).InflowDemandPerRoute(Temp_indexes) = Temp_newflowdem; % modify the original demands to account for node supply
+                Temp_newflowdem = mergeFair(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff./Temp_mergecoefftot);
+                % Modify the original demands to account for node supply
+                Reservoir(r).InflowDemandPerRoute(Temp_indexes) = Temp_newflowdem;
             end
         end
         
@@ -284,18 +259,17 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             Temp_proddem = Temp_Ltrip.*Reservoir(r).InflowDemandPerRoute(Temp_indexes);
             Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
             
-            Temp_prod = mergeNd(Temp_proddem,Temp_prodsupply,Temp_mergecoeff);
+            Temp_prod = mergeFair(Temp_proddem,Temp_prodsupply,Temp_mergecoeff);
             Reservoir(r).InflowSupplyPerRoute(Temp_indexes) = Temp_prod./Temp_Ltrip;
         else
             % Other merge models (for inflows)
             Temp_nr = sum(Reservoir(r).AccCircuPerRoute(:,itime));
             Temp_param = Reservoir(r).EntryfctParam;
-            Temp_prodsupply = Temp_QF*Entryfct(Temp_nr,Temp_param);
+            Temp_prodsupply = Temp_QF*(Entryfct(Temp_nr,Temp_param) - Reservoir(r).InternalProd);
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
             Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
             Temp_proddem = Temp_Ltrip.*Reservoir(r).InflowDemandPerRoute(Temp_indexes);
             Temp_flowdem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
-            Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
             Temp_nrp = Reservoir(r).AccCircuPerRoute(Temp_indexes,itime)';
             Temp_nr_entry = sum(Temp_nrp);
             if Temp_nr_entry == 0
@@ -306,9 +280,21 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             if sum(Temp_proddem) < Temp_prodsupply
                 Temp_flowsupply = Inf;
             else
-                Temp_flowsupply = (Temp_prodsupply - Temp_QF*Reservoir(r).InternalProd)/Temp_Lr_entry;
+                Temp_flowsupply = Temp_prodsupply/Temp_Lr_entry;
             end
-            Temp_inflow = mergeNd(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff);
+            
+            if strcmp(Simulation.MergeModel,'demfifo') && length(Reservoir(r).EntryNodesIndex) == 1 && ...
+                    strcmp(MacroNode(Reservoir(r).MacroNodesID(Reservoir(r).EntryNodesIndex)).Type,'externalentry')
+                % FIFO discipline merge only if one external entry node
+                Temp_t = SimulTime;
+                Temp_Nincurrent = Reservoir(r).NinPerRoute(Temp_indexes,itime)';
+                Temp_Nindem = Reservoir(r).NinDemandPerRoute(Temp_indexes,:);
+                Temp_inflow = mergeFIFO(itime,Temp_t,Temp_Nincurrent,Temp_Nindem,Temp_flowdem,Temp_flowsupply);
+            else
+                % Other merge models
+                Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
+                Temp_inflow = mergeFair(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff);
+            end
             Reservoir(r).InflowSupplyPerRoute(Temp_indexes) = Temp_inflow;
         end
     end
@@ -333,7 +319,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
                 Temp_dem = Reservoir(r).OutflowDemandPerRoute(Temp_indexes);
                 Temp_mergecoeff = Reservoir(r).ExitCoeffPerRoute(Temp_indexes);
                 Temp_mergecoefftot = sum(Temp_mergecoeff);
-                Temp_outflowsupply = mergeNd(Temp_dem,MacroNode(inode).Supply(itime),Temp_mergecoeff./Temp_mergecoefftot);
+                Temp_outflowsupply = mergeFair(Temp_dem,MacroNode(inode).Supply(itime),Temp_mergecoeff./Temp_mergecoefftot);
                 Reservoir(r).OutflowSupplyPerRoute(Temp_indexes) = Temp_outflowsupply;
             end
         end
@@ -343,10 +329,11 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             inode = Reservoir(r).MacroNodesID(i_n);
             Temp_indexes = Reservoir(r).NodeRoutesIndex{i_n};
             if ~isempty(Temp_indexes)
-                Temp_dem = Reservoir(r).OutflowDemandPerRoute(Temp_indexes);
+                Temp_flowdem = Reservoir(r).OutflowDemandPerRoute(Temp_indexes);
+                Temp_flowsupply = MacroNode(inode).Supply(itime);
                 Temp_mergecoeff = Reservoir(r).ExitCoeffPerRoute(Temp_indexes);
                 Temp_mergecoefftot = sum(Temp_mergecoeff);
-                Temp_outflowsupply = mergeNd(Temp_dem,MacroNode(inode).Supply(itime),Temp_mergecoeff./Temp_mergecoefftot);
+                Temp_outflowsupply = mergeFair(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff./Temp_mergecoefftot);
                 i = 1;
                 for i_r = Temp_indexes
                     iroute = Reservoir(r).RoutesID(i_r);
@@ -442,8 +429,6 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             Temp_acc_circu = Temp_acc_circu + TimeStep*(Temp_in - Temp_out);
             Temp_acc_queue = zeros(1,Temp_Nroutes);
         end
-        %Temp_acc = min([Temp_acc; Reservoir(r).MaxAcc*ones(1,Temp_Nroutes)]); % no guaranty on flow restriction in this model
-        %Reservoir(r).AccPerRoute(:,itime+1) = max([Temp_acc; zeros(1,Temp_Nroutes)])'; % to avoid negative values due to numerical errors
         Reservoir(r).AccCircuPerRoute(:,itime+1) = max([Temp_acc_circu; zeros(1,Temp_Nroutes)])'; % to avoid negative values due to numerical errors
         Reservoir(r).AccQueuePerRoute(:,itime+1) = max([Temp_acc_queue; zeros(1,Temp_Nroutes)])'; % to avoid negative values due to numerical errors
         Reservoir(r).NinPerRoute(:,itime+1) = Reservoir(r).NinPerRoute(:,itime) + TimeStep*Temp_in';

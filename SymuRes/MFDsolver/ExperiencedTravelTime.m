@@ -3,6 +3,8 @@ function TT = ExperiencedTravelTime(t,nin,nout)
 % Calculate the estimated travel time at t for the vehicle exiting at t
 % Estimation based on the cumulative entering and exiting vehicle curves
 %
+% Nov 2019 - Guilhem Mariotte
+%
 % INPUTS
 %---- t     : row vector, time [s] 
 %---- nin   : row vector, cumulative number of vehicles entering the network, same size as t

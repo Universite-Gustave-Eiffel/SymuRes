@@ -3,6 +3,8 @@ function [Texitnew, isupnew] = supplydiscr(Texit,Tlastexit,dN,toutS,qoutS,isup)
 % Return the minimum exit time allowed by supply for a given vehicle number
 % discretization step dN (dN might either < 1 or > 1)
 %
+% Nov 2019 - Guilhem Mariotte
+%
 % INPUTS
 %---- Texit     : scalar, desired exit time [s]
 %---- Tlastexit : scalar, last exit time [s]

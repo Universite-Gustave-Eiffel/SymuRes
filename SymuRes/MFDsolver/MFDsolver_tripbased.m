@@ -20,9 +20,6 @@ TimeStep = Simulation.TimeStep;
 MFDfct = Simulation.MFDfct;
 Entryfct = Simulation.Entryfct;
 
-% Smooth cumulative curves to improve accumulation estimation
-Temp_SmoothAcc = 0; % 1: Yes / 0: No
-
 % Assignment period time window
 Temp_StartTimeID = floor(Assignment.CurrentTime/TimeStep) + 1;
 Temp_EndTimeID = min([floor(Assignment.Periods(Assignment.CurrentPeriodID+1)/TimeStep) NumTimes-1]);
@@ -179,6 +176,8 @@ if Assignment.CurrentPeriodID == 1
     for r = 1:NumRes
         Reservoir(r).DemandEntryTimePerRoute = cell(1,length(Reservoir(r).RoutesID));
         Reservoir(r).DemandEntryVehPerRoute  = cell(1,length(Reservoir(r).RoutesID));
+        Reservoir(r).DemandEntryTime = [];
+        Reservoir(r).DemandEntryVeh  = [];
     end
 else
     
@@ -206,6 +205,8 @@ for i = Temp_istart:Temp_iend % loop on entry events of the current assignment p
     Vehicle(iveh).PathIndex = 1;
     Reservoir(r).DemandEntryTimePerRoute{i_r} = [Reservoir(r).DemandEntryTimePerRoute{i_r} Global.EntryTimes(i)];
     Reservoir(r).DemandEntryVehPerRoute{i_r} = [Reservoir(r).DemandEntryVehPerRoute{i_r} iveh];
+    Reservoir(r).DemandEntryTime = [Reservoir(r).DemandEntryTime Global.EntryTimes(i)];
+    Reservoir(r).DemandEntryVeh = [Reservoir(r).DemandEntryVeh iveh];
     
     iveh = iveh + 1;
 end
@@ -227,29 +228,21 @@ Global.VehID = [Global.VehID zeros(1,2*NumRes*Temp_Ntimes)];
 % Initialize for the first assignment period
 if Assignment.CurrentPeriodID == 1
     
-    % PWL function for the scaled MFD
-    Temp_Nbranches = 50;
-    MFDfct2 = @(n,scf,MFDpts) pwlinearFD3(n,{scf,MFDpts});
-    
     for r = 1:NumRes
         Temp_Nroutes = length(Reservoir(r).RoutesID);
-        
-        % MFD discretization for demand down-scaling
-        Temp_param = Reservoir(r).MFDfctParam;
-        Temp_accpts = linspace(0,Reservoir(r).MaxAcc,Temp_Nbranches+1); % discretization of the MFD into PWL function
-        Reservoir(r).MFDpts = [Temp_accpts ; MFDfct(Temp_accpts,Temp_param)]';
-        Temp_param = Reservoir(r).EntryfctParam;
-        Reservoir(r).EntryFctpts = [Temp_accpts ; Entryfct(Temp_accpts,Temp_param)]';
         
         % Simulation variable initialization
         if Temp_Nroutes > 0
             Reservoir(r).VehList = [];
             Reservoir(r).VehListPerRoute = cell(1,Temp_Nroutes);
+            Reservoir(r).FirstVehPerRoute = zeros(1,Temp_Nroutes);
             Reservoir(r).DemandTimeIndexPerRoute = ones(1,Temp_Nroutes);
+            Reservoir(r).DemandTimeIndex = 1;
             
             Reservoir(r).LastEntryTime = -Inf;
             Reservoir(r).LastExitTime = -Inf;
             Reservoir(r).LastEntryTimePerRoute = -Inf*ones(1,Temp_Nroutes);
+            Reservoir(r).PrevLastEntryTimePerRoute = -Inf*ones(1,Temp_Nroutes);
             Reservoir(r).LastExitTimePerRoute = -Inf*ones(1,Temp_Nroutes);
             Reservoir(r).NextEntryTime = Inf;
             Reservoir(r).NextExitTime = Inf;
@@ -260,9 +253,11 @@ if Assignment.CurrentPeriodID == 1
             
             Reservoir(r).DesiredEntryTimePerRoute = Inf*ones(1,Temp_Nroutes);
             Reservoir(r).DesiredExitTimePerRoute = Inf*ones(1,Temp_Nroutes);
+            Reservoir(r).DesiredEntryTime = Inf;
             Reservoir(r).DesiredExitTime = Inf;
             Reservoir(r).DesiredEntryVehPerRoute = zeros(1,Temp_Nroutes);
             Reservoir(r).DesiredExitVehPerRoute = zeros(1,Temp_Nroutes);
+            Reservoir(r).DesiredEntryVeh = 0;
             Reservoir(r).DesiredExitVeh = 0;
             
             Reservoir(r).EntrySupplyTimePerRoute = zeros(1,Temp_Nroutes);
@@ -282,6 +277,7 @@ if Assignment.CurrentPeriodID == 1
             Reservoir(r).CurrentMeanSpeed = Reservoir(r).FreeflowSpeed;
             Reservoir(r).MeanSpeed = zeros(1,NumTimes);
             Reservoir(r).InternalProd = 0;
+            Reservoir(r).EntryNodeSupplyPerRoute = Inf*ones(1,Temp_Nroutes);
             
             Reservoir(r).MergeCoeffPerRoute = ones(1,Temp_Nroutes);
             Reservoir(r).ExitCoeffPerRoute = ones(1,Temp_Nroutes);
@@ -289,20 +285,20 @@ if Assignment.CurrentPeriodID == 1
     end
     
     % Origin and destination reservoir lists
-    OriResList = [];
-    DestResList = [];
+    Temp_OriResList = [];
+    Temp_DestResList = [];
     for iroute = 1:NumRoutes
         Route(iroute).TravelTime = zeros(1,NumTimes);
         
         if Route(iroute).AssignCoeff > 0 % if the route is used
             o = Route(iroute).ResOriginID;
             d = Route(iroute).ResDestinationID;
-            OriResList = [OriResList o];
-            DestResList = [DestResList d];
+            Temp_OriResList = [Temp_OriResList o];
+            Temp_DestResList = [Temp_DestResList d];
         end
     end
-    OriResList = unique(OriResList);
-    DestResList = unique(DestResList);
+    Global.OriResList = unique(Temp_OriResList);
+    Global.DestResList = unique(Temp_DestResList);
     
     for inode = 1:NumMacroNodes
         MacroNode(inode).Capacity.TimeIndex = 1;
@@ -322,13 +318,16 @@ end
 % Initialize at each period
 for r = 1:NumRes
     Reservoir(r).MeanSpeed2 = zeros(1,Global.NumMaxEvents);
+    Reservoir(r).InflowSupply = zeros(1,Global.NumMaxEvents);
+    Reservoir(r).EntryTripLength = zeros(1,Global.NumMaxEvents);
+    Reservoir(r).ProdSupply = zeros(1,Global.NumMaxEvents);
 end
 for iroute = 1:NumRoutes
     Route(iroute).TravelTime2 = zeros(1,Global.NumMaxEvents);
 end
 
 % Initialize the desired entry time and next entry in origin reservoirs
-for r = OriResList
+for r = Global.OriResList
     % Internal demand
     for i_r = [Reservoir(r).OriRoutesIndex Reservoir(r).EntryRoutesIndex]
         Temp_index = Reservoir(r).DemandTimeIndexPerRoute(i_r);
@@ -340,13 +339,48 @@ for r = OriResList
             Reservoir(r).DesiredEntryVehPerRoute(i_r) = 1;
         end
     end
+    Temp_index = Reservoir(r).DemandTimeIndex;
+    if Temp_index <= length(Reservoir(r).DemandEntryTime)
+        Reservoir(r).DesiredEntryTime = Reservoir(r).DemandEntryTime(Temp_index);
+        Reservoir(r).DesiredEntryVeh = Reservoir(r).DemandEntryVeh(Temp_index);
+    else
+        Reservoir(r).DesiredEntryTime = Inf;
+        Reservoir(r).DesiredEntryVeh = 1;
+    end
     
     % Next entry in the origin reservoir (beginning of a route)
-    Temp_demandtimes = Reservoir(r).DesiredEntryTimePerRoute;
-    Temp_supplytimes = Reservoir(r).EntrySupplyTimePerRoute;
-    [Temp_time, Temp_iroute] = mergetimeNd3(Temp_demandtimes,Temp_supplytimes);
-    Reservoir(r).NextEntryTime = Temp_time;
-    Reservoir(r).NextEntryVehID = Reservoir(r).DesiredEntryVehPerRoute(Temp_iroute);
+    Temp_indexes = [];
+    for i_r = 1:length(Reservoir(r).RoutesID)
+        iroute = Reservoir(r).RoutesID(i_r);
+        if r == Route(iroute).ResOriginID
+            Temp_indexes = [Temp_indexes i_r];
+        end
+    end
+    if ~isempty(Temp_indexes)
+        if strcmp(Simulation.MergeModel,'demfifo') && length(Reservoir(r).EntryNodesIndex) == 1
+            % FIFO discipline merge only if one external entry node
+            Temp_demandtime = Reservoir(r).DesiredEntryTime; % not necessarily route beginning!
+            Temp_supplytime = Reservoir(r).EntrySupplyTime;
+            iveh = Reservoir(r).DesiredEntryVeh;
+            iroute = Vehicle(iveh).RouteID;
+            i_r = Route(iroute).ResRouteIndex(r);
+            Temp_time2 = Reservoir(r).LastEntryTime + 1/Reservoir(r).EntryNodeSupplyPerRoute(i_r);
+            Reservoir(r).NextEntryTime = max([Temp_demandtime Temp_supplytime Temp_time2]);
+            Reservoir(r).NextEntryVehID = iveh;
+        else
+            % Other merge models
+            Temp_demandtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
+            Temp_supplytimes = Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes);
+            [Temp_time, i_r] = selectmintime(Temp_demandtimes,Temp_supplytimes);
+            iveh = Reservoir(r).DesiredEntryVehPerRoute(Temp_indexes(i_r));
+            Temp_time2 = Reservoir(r).LastEntryTime + 1/Reservoir(r).EntryNodeSupplyPerRoute(Temp_indexes(i_r));
+            Reservoir(r).NextEntryTime = max([Temp_time Temp_time2 CurrentTime]);
+            Reservoir(r).NextEntryVehID = iveh;
+        end
+    else
+        Reservoir(r).NextEntryTime = Inf;
+        Reservoir(r).NextEntryVehID = 1;
+    end
 end
 
 eps0 = 0.1;
@@ -366,6 +400,15 @@ while CurrentTime < Temp_EndTime
     if floor(NextEvent.VehID/1000) == NextEvent.VehID/1000
         fprintf('%s%3.3f \t %s%i \t %s%i \n','time=',CurrentTime,'nextevent=',NextEvent.Type,'vehID=',NextEvent.VehID)
     end
+    
+    for r = 1:NumRes
+        for i_r = 1:length(Reservoir(r).RoutesID)
+            if sum(ismember(Reservoir(r).VehListPerRoute{i_r},Reservoir(r).VehList)) ~= length(Reservoir(r).VehListPerRoute{i_r})
+                keyboard
+            end
+        end
+    end
+    
     
     % Update traveled distances
     %--------------------------
@@ -426,30 +469,34 @@ while CurrentTime < Temp_EndTime
         
         % Update reservoir mean speed
         Temp_nr = Reservoir(ires).CurrentAcc;
-        Temp_MFDpts = Reservoir(ires).MFDpts;
+        Temp_param = Reservoir(ires).MFDfctParam;
         Temp_scf = Simulation.TripbasedSimuFactor;
         if Temp_nr == 0
             Temp_Vr = Reservoir(ires).FreeflowSpeed;
         else
-            Temp_Vr = MFDfct2(Temp_nr,Temp_scf,Temp_MFDpts)/Temp_nr;
+            Temp_Vr = MFDfct(Temp_nr,Temp_scf*Temp_param)/Temp_nr;
         end
         Reservoir(ires).CurrentMeanSpeed = Temp_Vr;
         Reservoir(ires).MeanSpeed2(itime) = Temp_Vr;
         
-        % Remove from the route waiting list
-        if length(Reservoir(ires).VehListPerRoute{i_r}) == 1
-            Reservoir(ires).VehListPerRoute{i_r} = [];
+        % Remove from the global waiting list
+        i = 1;
+        while i <= length(Reservoir(ires).VehList) && Reservoir(ires).VehList(i) ~= iveh
+            i = i + 1;
+        end
+        Reservoir(ires).VehList(i) = [];
+        
+        % Find the next first vehicle to exit for the current route
+        i = 1;
+        while i <= length(Reservoir(ires).VehList) && Vehicle(Reservoir(ires).VehList(i)).RouteID ~= iroute
+            i = i + 1;
+        end
+        if i <= length(Reservoir(ires).VehList)
+            Reservoir(ires).FirstVehPerRoute(i_r) = Reservoir(ires).VehList(i);
         else
-            Temp_vehlist = Reservoir(ires).VehListPerRoute{i_r};
-            Reservoir(ires).VehListPerRoute{i_r} = Temp_vehlist(2:end);
+            Reservoir(ires).FirstVehPerRoute(i_r) = 0; % no next veh found on this route
         end
         
-        % Remove from the global waiting list
-        if length(Reservoir(ires).VehList) == 1
-            Reservoir(ires).VehList = [];
-        else
-            Reservoir(ires).VehList = Reservoir(ires).VehList(2:end);
-        end
     end
     
     
@@ -470,6 +517,7 @@ while CurrentTime < Temp_EndTime
         % Vehicle entry time
         Vehicle(iveh).EntryTimes(Temp_pathindex) = CurrentTime;
         Reservoir(ires).LastEntryTime = CurrentTime;
+        Reservoir(ires).PrevLastEntryTimePerRoute(i_r) = Reservoir(ires).LastEntryTimePerRoute(i_r);
         Reservoir(ires).LastEntryTimePerRoute(i_r) = CurrentTime;
         
         % Set trip length for the current reservoir
@@ -491,41 +539,15 @@ while CurrentTime < Temp_EndTime
         
         % Update reservoir mean speed
         Temp_nr = Reservoir(ires).CurrentAcc;
-        Temp_MFDpts = Reservoir(ires).MFDpts;
+        Temp_param = Reservoir(ires).MFDfctParam;
         Temp_scf = Simulation.TripbasedSimuFactor;
         if Temp_nr == 0
             Temp_Vr = Reservoir(ires).FreeflowSpeed;
         else
-            Temp_Vr = MFDfct2(Temp_nr,Temp_scf,Temp_MFDpts)/Temp_nr;
+            Temp_Vr = MFDfct(Temp_nr,Temp_scf*Temp_param)/Temp_nr;
         end
         Reservoir(ires).CurrentMeanSpeed = Temp_Vr;
         Reservoir(ires).MeanSpeed2(itime) = Temp_Vr;
-        
-        % Route waiting list for exiting the reservoir: order of exit
-        Temp_vehlist = Reservoir(ires).VehListPerRoute{i_r};
-        if isempty(Temp_vehlist)
-            Reservoir(ires).VehListPerRoute{i_r} = iveh;
-        else
-            i_p = Vehicle(iveh).PathIndex;
-            Temp_dist = Vehicle(iveh).TripLength(i_p) - Vehicle(iveh).TraveledDistance(i_p); % remaining distance
-            Temp_vehlist = [Temp_vehlist iveh]; % veh in last position by default
-            Temp_vehlist2 = Temp_vehlist;
-            i = length(Temp_vehlist2);
-            if i > 1
-                i_p = Vehicle(Temp_vehlist2(i-1)).PathIndex;
-                Temp_dist2 = Vehicle(Temp_vehlist2(i-1)).TripLength(i_p) - Vehicle(Temp_vehlist2(i-1)).TraveledDistance(i_p); % remaining distance
-                while i > 1 && Temp_dist < Temp_dist2
-                    Temp_vehlist(i) = Temp_vehlist(i-1);
-                    Temp_vehlist(i-1) = iveh;
-                    i = i - 1;
-                    if i > 1
-                        i_p = Vehicle(Temp_vehlist2(i-1)).PathIndex;
-                        Temp_dist2 = Vehicle(Temp_vehlist2(i-1)).TripLength(i_p) - Vehicle(Temp_vehlist2(i-1)).TraveledDistance(i_p); % remaining distance
-                    end
-                end
-            end
-            Reservoir(ires).VehListPerRoute{i_r} = Temp_vehlist;
-        end
         
         % Global waiting list for exiting the reservoir: order of exit
         Temp_vehlist = Reservoir(ires).VehList;
@@ -553,6 +575,10 @@ while CurrentTime < Temp_EndTime
             Reservoir(ires).VehList = Temp_vehlist;
         end
         
+        % Set the first vehicle to exit for each route in r
+        if Reservoir(ires).FirstVehPerRoute(i_r) == 0
+            Reservoir(ires).FirstVehPerRoute(i_r) = iveh;
+        end
         
     else % The vehicle has arrived at destination
         
@@ -571,10 +597,11 @@ while CurrentTime < Temp_EndTime
         Temp_Pc = Reservoir(r).MaxProd;
         Temp_scf = Simulation.TripbasedSimuFactor;
         for i_r = Reservoir(r).ExitRoutesIndex % loop on all routes exiting Rr
-            if ~isempty(Reservoir(r).VehListPerRoute{i_r})
-                iveh = Reservoir(r).VehListPerRoute{i_r}(1); % first vehicle in the waiting list
+            iveh = Reservoir(r).FirstVehPerRoute(i_r);
+            if iveh > 0
                 i_p = Vehicle(iveh).PathIndex;
-                if Reservoir(r).CurrentAcc > Temp_scf*Reservoir(r).CritAcc && strcmp(Simulation.DivergeModel,'maxdem')
+                if Reservoir(r).CurrentAcc > Temp_scf*Reservoir(r).CritAcc && ...
+                        (strcmp(Simulation.DivergeModel,'maxdem') || strcmp(Simulation.DivergeModel,'queuedyn'))
                     % Force the veh to exit in case of congested state
                     Vehicle(iveh).TraveledDistance(i_p) = Vehicle(iveh).TripLength(i_p);
                 end
@@ -586,8 +613,8 @@ while CurrentTime < Temp_EndTime
                 end
                 Temp_nrp = Reservoir(r).CurrentAccPerRoute(i_r);
                 Temp_Lrp = Reservoir(r).TripLengthPerRoute(i_r);
-                Temp_time2 = Reservoir(r).LastExitTimePerRoute(i_r) + Temp_nr/Temp_nrp*Temp_Lrp/(Temp_scf*Temp_Pc);
-                %Temp_time2 = 0;
+                %Temp_time2 = Reservoir(r).LastExitTimePerRoute(i_r) + Temp_nr/Temp_nrp*Temp_Lrp/(Temp_scf*Temp_Pc);
+                Temp_time2 = 0;
                 Temp_time = max([Temp_time CurrentTime Temp_time2]);
                 Reservoir(r).DesiredExitTimePerRoute(i_r) = Temp_time;
                 Reservoir(r).DesiredExitVehPerRoute(i_r) = iveh;
@@ -597,8 +624,8 @@ while CurrentTime < Temp_EndTime
             end
         end
         for i_r = Reservoir(r).DestRoutesIndex % loop on all routes ending in Rr
-            if ~isempty(Reservoir(r).VehListPerRoute{i_r})
-                iveh = Reservoir(r).VehListPerRoute{i_r}(1); % first vehicle in the waiting list
+            iveh = Reservoir(r).FirstVehPerRoute(i_r);
+            if iveh > 0
                 i_p = Vehicle(iveh).PathIndex;
                 if Reservoir(r).CurrentMeanSpeed > 0
                     Temp_time = CurrentTime + (Vehicle(iveh).TripLength(i_p) - Vehicle(iveh).TraveledDistance(i_p))/Reservoir(r).CurrentMeanSpeed;
@@ -608,8 +635,8 @@ while CurrentTime < Temp_EndTime
                 end
                 Temp_nrp = Reservoir(r).CurrentAccPerRoute(i_r);
                 Temp_Lrp = Reservoir(r).TripLengthPerRoute(i_r);
-                Temp_time2 = Reservoir(r).LastExitTimePerRoute(i_r) + Temp_nr/Temp_nrp*Temp_Lrp/(Temp_scf*Temp_Pc);
-                %Temp_time2 = 0;
+                %Temp_time2 = Reservoir(r).LastExitTimePerRoute(i_r) + Temp_nr/Temp_nrp*Temp_Lrp/(Temp_scf*Temp_Pc);
+                Temp_time2 = 0;
                 Temp_time = max([Temp_time CurrentTime Temp_time2]);
                 Reservoir(r).DesiredExitTimePerRoute(i_r) = Temp_time;
                 Reservoir(r).DesiredExitVehPerRoute(i_r) = iveh;
@@ -617,38 +644,6 @@ while CurrentTime < Temp_EndTime
                 Reservoir(r).DesiredExitTimePerRoute(i_r) = Inf;
                 Reservoir(r).DesiredExitVehPerRoute(i_r) = 1;
             end
-        end
-        
-        if ~isempty(Reservoir(r).VehList)
-            iveh = Reservoir(r).VehList(1); % first vehicle in the waiting list
-            i_p = Vehicle(iveh).PathIndex;
-            iroute = Vehicle(iveh).RouteID;
-            i_r = Route(iroute).ResRouteIndex(r);
-            if Reservoir(r).CurrentAcc > Temp_scf*Reservoir(r).CritAcc && strcmp(Simulation.DivergeModel,'maxdem') && ismember(i_r,Reservoir(r).ExitRoutesIndex)
-                % Force the veh to exit in case of congested state
-                Vehicle(iveh).TraveledDistance(i_p) = Vehicle(iveh).TripLength(i_p);
-            end
-            if Reservoir(r).CurrentMeanSpeed > 0
-                Temp_time = CurrentTime + (Vehicle(iveh).TripLength(i_p) - Vehicle(iveh).TraveledDistance(i_p))/Reservoir(r).CurrentMeanSpeed;
-            else
-                %Temp_time = Inf;
-                Temp_time = CurrentTime;
-            end
-            Temp_Lrp = Reservoir(r).TripLengthPerRoute;
-            Temp_nrp = Reservoir(r).CurrentAccPerRoute;
-            if Temp_nr == 0
-                Temp_Lr = mean(Temp_Lrp);
-            else
-                Temp_Lr = Temp_nr/sum(Temp_nrp./Temp_Lrp);
-            end
-            Temp_time2 = Reservoir(r).LastExitTime + Temp_Lr/(Temp_scf*Temp_Pc);
-            %Temp_time2 = 0;
-            Temp_time = max([Temp_time CurrentTime Temp_time2]);
-            Reservoir(r).DesiredExitTime = Temp_time;
-            Reservoir(r).DesiredExitVeh = iveh;
-        else
-            Reservoir(r).DesiredExitTime = Inf;
-            Reservoir(r).DesiredExitVeh = 0;
         end
     end
     
@@ -671,8 +666,18 @@ while CurrentTime < Temp_EndTime
             Reservoir(ires).DesiredEntryTimePerRoute(i_r) = Inf;
             Reservoir(ires).DesiredEntryVehPerRoute(i_r) = 1;
         end
+        Reservoir(ires).DemandTimeIndex = Reservoir(ires).DemandTimeIndex + 1;
+        Temp_index = Reservoir(ires).DemandTimeIndex;
+        if Temp_index <= length(Reservoir(ires).DemandEntryTime)
+            Reservoir(ires).DesiredEntryTime = Reservoir(ires).DemandEntryTime(Temp_index); % only for route beginning
+            Reservoir(ires).DesiredEntryVeh = Reservoir(ires).DemandEntryVeh(Temp_index); % only for route beginning
+        else
+            Reservoir(ires).DesiredEntryTime = Inf;
+            Reservoir(ires).DesiredEntryVeh = 1;
+        end
     end
     % Update the desired entry time with the desired exit time from previous res (route transfer)
+    Temp_reslist = [];
     for r = NextEvent.ResList % loop only on reservoirs where accumulation changed
         for i_r = Reservoir(r).ExitRoutesIndex % loop on all routes exiting Rr
             iroute = Reservoir(r).RoutesID(i_r);
@@ -681,6 +686,7 @@ while CurrentTime < Temp_EndTime
                 i_r2 = Route(iroute).ResRouteIndex(r2);
                 Reservoir(r2).DesiredEntryTimePerRoute(i_r2) = Reservoir(r).DesiredExitTimePerRoute(i_r);
                 Reservoir(r2).DesiredEntryVehPerRoute(i_r2) = Reservoir(r).DesiredExitVehPerRoute(i_r);
+                Temp_reslist = [Temp_reslist r2];
             end
         end
     end
@@ -693,32 +699,6 @@ while CurrentTime < Temp_EndTime
         Temp_Nroutes = length(Reservoir(r).RoutesID);
         Temp_Nsmooth = sum(Reservoir(r).CurrentAccPerRoute > 0);
         %Temp_Nsmooth = length(Reservoir(r).RoutesID) + 2;
-        Temp_nr = 0;
-        for i_r = 1:Temp_Nroutes % loop on all routes including the reservoir
-            Temp_nrp = Reservoir(r).CurrentAccPerRoute(i_r);
-            if Temp_SmoothAcc == 1
-                Temp_nrp = smoothacc(Temp_nrp,Reservoir(r).EntryTimesPerRoute{i_r},Reservoir(r).ExitTimesPerRoute{i_r},Temp_Nsmooth);
-            end
-            Temp_nr = Temp_nr + Temp_nrp;
-        end
-        
-        % Inflow demand estimation
-        Temp_qinr = zeros(1,Temp_Nroutes);
-        for i_r = 1:Temp_Nroutes
-            Temp_tin = Reservoir(r).EntryTimesPerRoute{i_r};
-            if ~isempty(Temp_tin)
-                iroute = Reservoir(r).RoutesID(i_r);
-                inode = Route(iroute).NodePath(Reservoir(r).RoutesPathIndex(i_r)); % entry/origin node for iroute in Rr
-                Temp_Nin = 1:length(Temp_tin);
-                if length(Temp_tin) > Temp_Nsmooth + 1
-                    Temp_qinr(i_r) = linregr2(Temp_tin((end-Temp_Nsmooth):end),Temp_Nin((end-Temp_Nsmooth):end));
-                else
-                    Temp_qinr(i_r) = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
-                end
-            else
-                Temp_qinr(i_r) = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
-            end
-        end
         Temp_qinr2 = zeros(1,Temp_Nroutes);
         for i_r = 1:Temp_Nroutes
             if Reservoir(r).DesiredEntryTimePerRoute(i_r) > Reservoir(r).LastEntryTimePerRoute(i_r) ...
@@ -747,7 +727,7 @@ while CurrentTime < Temp_EndTime
                     Temp_mergecoeff = ones(1,length(Temp_indexes));
                 end
                 Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
-                Temp_inflow = mergeNd(Temp_dem,Temp_sup,Temp_mergecoeff);
+                Temp_inflow = mergeFair(Temp_dem,Temp_sup,Temp_mergecoeff);
                 Temp_supplytimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes) + 1./Temp_inflow;
                 Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
                 Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
@@ -772,8 +752,6 @@ while CurrentTime < Temp_EndTime
             if Temp_demtot > 0
                 Reservoir(r).MergeCoeffPerRoute(Temp_indexes) = Temp_dem./Temp_demtot;
             end
-        elseif strcmp(Simulation.MergeModel,'demfifo')
-            % TODO
         elseif strcmp(Simulation.MergeModel,'equiproba')
             % Equi-probability for all transfer inflows
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
@@ -788,14 +766,18 @@ while CurrentTime < Temp_EndTime
             inode = Reservoir(r).MacroNodesID(i_n);
             Temp_indexes = Reservoir(r).NodeRoutesIndex{i_n};
             if ~isempty(Temp_indexes)
-                Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
-                Temp_mergecoefftot = sum(Temp_mergecoeff);
-                Temp_demtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
-                Temp_lasttimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes);
                 Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
-                
-                Temp_entrytimes = mergetimeNd4(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
-                Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes) = max([Temp_entrytimes; Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes)]); % modify the original desired times to account for node supply
+                % Modify the original desired entry times for the endogenous merge
+                if strcmp(Simulation.MergeModel,'endogenous')
+                    Temp_demtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
+                    Temp_lasttimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes);
+                    Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
+                    Temp_mergecoefftot = sum(Temp_mergecoeff);
+                    Temp_entrytimes = mergetimeFair(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,1,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
+                    Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes) = max([Temp_entrytimes; Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes)]);
+                end
+                % Use directly the node supply for other merge models
+                Reservoir(r).EntryNodeSupplyPerRoute(Temp_indexes) = Temp_sup;
             end
         end
         
@@ -803,27 +785,23 @@ while CurrentTime < Temp_EndTime
         if strcmp(Simulation.MergeModel,'endogenous')
             % Endogenous merge (for entering productions)
             Temp_nr = Reservoir(r).CurrentAcc;
-            Temp_entrypts = Reservoir(r).EntryFctpts;
             Temp_scf = Simulation.TripbasedSimuFactor;
-            Temp_prodsupply = MFDfct2(Temp_nr,Temp_scf,Temp_entrypts) - Reservoir(r).InternalProd; % SCF already included in InternalProd
-            %Temp_param = Reservoir(r).EntryfctParam;
-            %Temp_prodsupply = Entryfct(Temp_nr,Temp_param) - Reservoir(r).InternalProd;
+            Temp_param = Reservoir(r).EntryfctParam;
+            Temp_prodsupply = Entryfct(Temp_nr,Temp_scf*Temp_param) - Reservoir(r).InternalProd; % SCF already included in InternalProd
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
             Temp_Lrp = Reservoir(r).TripLengthPerRoute(Temp_indexes);
             Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
             Temp_demtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
             Temp_lasttimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes);
             
-            Temp_supplytimes = mergetimeNd4(Temp_Lrp,Temp_demtimes,Temp_lasttimes,Temp_prodsupply,Temp_mergecoeff);
+            Temp_supplytimes = mergetimeFair(Temp_Lrp,Temp_demtimes,Temp_lasttimes,1,Temp_prodsupply,Temp_mergecoeff);
             Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
         else
             % Other merge models (for inflows)
             Temp_nr = Reservoir(r).CurrentAcc;
-            Temp_entrypts = Reservoir(r).EntryFctpts;
             Temp_scf = Simulation.TripbasedSimuFactor;
-            Temp_prodsupply = MFDfct2(Temp_nr,Temp_scf,Temp_entrypts);
-            %Temp_param = Reservoir(r).EntryfctParam;
-            %Temp_prodsupply = Entryfct(Temp_nr,Temp_param);
+            Temp_param = Reservoir(r).EntryfctParam;
+            Temp_prodsupply = Entryfct(Temp_nr,Temp_scf*Temp_param);
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
             Temp_Lrp = Reservoir(r).TripLengthPerRoute(Temp_indexes);
             Temp_proddem = Temp_Lrp.*Temp_qinr2(Temp_indexes);
@@ -843,7 +821,7 @@ while CurrentTime < Temp_EndTime
             Temp_demtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
             Temp_lasttimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes);
             
-            Temp_supplytimes = mergetimeNd4(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,Temp_flowsupply,Temp_mergecoeff);
+            Temp_supplytimes = mergetimeFair(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,1,Temp_flowsupply,Temp_mergecoeff);
             Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
             Reservoir(r).EntrySupplyTime = Reservoir(r).LastEntryTime + 1/Temp_flowsupply; % global entry supply time
         end
@@ -852,7 +830,7 @@ while CurrentTime < Temp_EndTime
     
     % Reservoir exit supply limitation (destination)
     %---------------------------------
-    for r = DestResList % loop on all destination reservoirs
+    for r = Global.DestResList % loop on all destination reservoirs
         
         % Outflow demand estimation
         Temp_scf = Simulation.TripbasedSimuFactor;
@@ -877,8 +855,7 @@ while CurrentTime < Temp_EndTime
         Temp_dem = Temp_qoutr;
         Temp_demtot = sum(Temp_dem);
         if Temp_demtot > 0
-            %Reservoir(r).ExitCoeffPerRoute = Temp_dem./Temp_demtot;
-            Reservoir(r).ExitCoeffPerRoute = ones(1,Temp_Nroutes)./Temp_Nroutes;
+            Reservoir(r).ExitCoeffPerRoute = Temp_dem./Temp_demtot;
         end
         
         % Exit supply for internal destinations
@@ -892,7 +869,7 @@ while CurrentTime < Temp_EndTime
                 Temp_lasttimes = Reservoir(r).LastExitTimePerRoute(Temp_indexes);
                 Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
                 
-                Temp_supplytimes = mergetimeNd4(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
+                Temp_supplytimes = mergetimeFair(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,1,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
                 Reservoir(r).ExitSupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
             end
         end
@@ -902,7 +879,7 @@ while CurrentTime < Temp_EndTime
     % Reservoir exit supply time (in the middle of a route)
     % Next entry in reservoirs
     %---------------------------
-    NextEvent.ExitResList = DestResList;
+    NextEvent.ExitResList = Global.DestResList;
     for r = NextEvent.ResList % loop only on reservoirs where accumulation changed
         
         % Exit supply for external destinations and transfer to another reservoir
@@ -916,7 +893,7 @@ while CurrentTime < Temp_EndTime
                 Temp_lasttimes = Reservoir(r).LastExitTimePerRoute(Temp_indexes);
                 Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
                 
-                Temp_supplytimes = mergetimeNd4(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
+                Temp_supplytimes = mergetimeFair(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,1,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
                 i = 1;
                 for i_r = Temp_indexes
                     iroute = Reservoir(r).RoutesID(i_r);
@@ -925,8 +902,12 @@ while CurrentTime < Temp_EndTime
                     else
                         r2 = Route(iroute).ResPath(Reservoir(r).RoutesPathIndex(i_r)+1); % next reservoir in the route
                         i_r2 = Route(iroute).ResRouteIndex(r2);
-                        Reservoir(r).ExitSupplyTimePerRoute(i_r) = Reservoir(r2).EntrySupplyTimePerRoute(i_r2); % node supply already included in the inflow supply
-                        Reservoir(r).ExitSupplyTime = Reservoir(r2).EntrySupplyTime;
+                        if strcmp(Simulation.MergeModel,'endogenous')
+                            Reservoir(r).ExitSupplyTimePerRoute(i_r) = Reservoir(r2).EntrySupplyTimePerRoute(i_r2); % node supply already included in the inflow supply
+                        else
+                            Temp_time = Reservoir(r2).LastEntryTime + 1/Reservoir(r2).EntryNodeSupplyPerRoute(i_r2);
+                            Reservoir(r).ExitSupplyTimePerRoute(i_r) = max([Reservoir(r2).EntrySupplyTime Temp_time]);
+                        end
                         NextEvent.ExitResList = [NextEvent.ExitResList r];
                     end
                     i = i + 1;
@@ -943,17 +924,29 @@ while CurrentTime < Temp_EndTime
             end
         end
         if ~isempty(Temp_indexes)
-            if strcmp(Simulation.MergeModel,'demfifo')
-                Temp_demandtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
-                [Temp_time, Temp_ir] = min(Temp_demandtimes);
-                Reservoir(r).NextEntryTime = max([Temp_time Reservoir(r).EntrySupplyTime]);
-                Reservoir(r).NextEntryVehID = Reservoir(r).DesiredEntryVehPerRoute(Temp_indexes(Temp_ir));
+            if strcmp(Simulation.MergeModel,'demfifo') && length(Reservoir(r).EntryNodesIndex) == 1
+                % FIFO discipline merge only if one external entry node
+                Temp_demandtime = Reservoir(r).DesiredEntryTime; % not necessarily route beginning!
+                Temp_supplytime = Reservoir(r).EntrySupplyTime;
+                iveh = Reservoir(r).DesiredEntryVeh;
+                iroute = Vehicle(iveh).RouteID;
+                i_r = Route(iroute).ResRouteIndex(r);
+                Temp_time2 = Reservoir(r).LastEntryTime + 1/Reservoir(r).EntryNodeSupplyPerRoute(i_r);
+                Reservoir(r).NextEntryTime = max([Temp_demandtime Temp_supplytime Temp_time2]);
+                Reservoir(r).NextEntryVehID = iveh;
             else
+                % Other merge models
                 Temp_demandtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
                 Temp_supplytimes = Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes);
-                [Temp_time, Temp_ir] = mergetimeNd3(Temp_demandtimes,Temp_supplytimes);
-                Reservoir(r).NextEntryTime = max([Temp_time CurrentTime]);
-                Reservoir(r).NextEntryVehID = Reservoir(r).DesiredEntryVehPerRoute(Temp_indexes(Temp_ir));
+                [Temp_time, i_r] = selectmintime(Temp_demandtimes,Temp_supplytimes);
+                iveh = Reservoir(r).DesiredEntryVehPerRoute(Temp_indexes(i_r));
+                if strcmp(Simulation.MergeModel,'endogenous')
+                    Temp_time2 = 0;
+                else
+                    Temp_time2 = Reservoir(r).LastEntryTime + 1/Reservoir(r).EntryNodeSupplyPerRoute(Temp_indexes(i_r));
+                end
+                Reservoir(r).NextEntryTime = max([Temp_time Temp_time2 CurrentTime]);
+                Reservoir(r).NextEntryVehID = iveh;
             end
         else
             Reservoir(r).NextEntryTime = Inf;
@@ -967,25 +960,35 @@ while CurrentTime < Temp_EndTime
     %------------------------
     Temp_reslist = unique([NextEvent.ResList NextEvent.ExitResList]);
     for r = Temp_reslist
-        % Reservoir most restrictive supply time
-        iveh = Reservoir(r).DesiredExitVeh;
-        if iveh > 0
-            iroute = Vehicle(iveh).RouteID;
-            i_r = Route(iroute).ResRouteIndex(r);
-            Temp_ExitSupplyTime = Reservoir(r).ExitSupplyTimePerRoute(i_r);
-        else
-            Temp_ExitSupplyTime = 0;
-        end
-        
         % Next exit from the current reservoir
-        if strcmp(Simulation.DivergeModel,'maxdem')
-            Temp_time = max([Reservoir(r).DesiredExitTime Temp_ExitSupplyTime CurrentTime]);
+        if strcmp(Simulation.DivergeModel,'maxdem') || strcmp(Simulation.DivergeModel,'queuedyn')
+            if ~isempty(Reservoir(r).VehList)
+                iveh = Reservoir(r).VehList(1);
+                iroute = Vehicle(iveh).RouteID;
+                i_r = Route(iroute).ResRouteIndex(r);
+                Temp_nr = Reservoir(r).CurrentAcc;
+                Temp_Pc = Reservoir(r).MaxProd;
+                Temp_Lrp = Reservoir(r).TripLengthPerRoute;
+                Temp_nrp = Reservoir(r).CurrentAccPerRoute;
+                if Temp_nr == 0
+                    Temp_Lr = mean(Temp_Lrp);
+                else
+                    Temp_Lr = Temp_nr/sum(Temp_nrp./Temp_Lrp);
+                end
+                Temp_time2 = Reservoir(r).LastExitTime + Temp_Lr/(Temp_scf*Temp_Pc);
+                Temp_demandtime = Reservoir(r).DesiredExitTimePerRoute(i_r);
+                Temp_supplytime = Reservoir(r).ExitSupplyTimePerRoute(i_r);
+                Temp_time = max([Temp_demandtime Temp_supplytime Temp_time2 CurrentTime]);
+            else
+                iveh = 0;
+                Temp_time = Inf;
+            end
             Reservoir(r).NextExitTime = Temp_time;
-            Reservoir(r).NextExitVehID = Reservoir(r).DesiredExitVeh;
+            Reservoir(r).NextExitVehID = iveh;
         else
             Temp_demandtimes = Reservoir(r).DesiredExitTimePerRoute;
             Temp_supplytimes = Reservoir(r).ExitSupplyTimePerRoute;
-            [Temp_time, Temp_iroute] = mergetimeNd3(Temp_demandtimes,Temp_supplytimes);
+            [Temp_time, Temp_iroute] = selectmintime(Temp_demandtimes,Temp_supplytimes);
             Reservoir(r).NextExitTime = max([Temp_time CurrentTime]);
             Reservoir(r).NextExitVehID = Reservoir(r).DesiredExitVehPerRoute(Temp_iroute);
         end

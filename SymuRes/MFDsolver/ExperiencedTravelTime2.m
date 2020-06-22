@@ -4,6 +4,8 @@ function TT = ExperiencedTravelTime2(t,nin,nout,it1,it2)
 % over the period [t(it1) t(it2)].
 % Estimation based on the cumulative entering and exiting vehicle curves
 %
+% Nov 2019 - Guilhem Mariotte
+%
 % INPUTS
 %---- t     : row vector, time [s] 
 %---- nin   : row vector, cumulative number of vehicles entering the network, same size as t

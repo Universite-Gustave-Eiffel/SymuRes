@@ -3,6 +3,8 @@ function nsmooth = smoothacc(n0,tin,tout,Nsmooth)
 % Smooth the variation of accumulation in calculating the exact non integer
 % value of n thanks to the count curves
 %
+% Nov 2019 - Guilhem Mariotte
+%
 % INPUTS
 %---- n0      : integer, actual integer value of accumulation
 %---- tin     : vector, list of entry times

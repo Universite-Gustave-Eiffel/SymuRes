@@ -3,6 +3,8 @@ function departuretime = demdiscr(Tsimul,dN,tinD,qinD)
 % Return the departure times for a given vehicle number discretization step
 % dN (dN might either < 1 or > 1)
 %
+% Nov 2019 - Guilhem Mariotte
+%
 % INPUTS
 %---- Tsimul : scalar, simulation duration [s]
 %---- dN     : scalar, vehicle step [veh]
