@@ -23,9 +23,12 @@ MFDfct = @paraboFD;
 
 % Entry supply function
 % param = [nj nc Pc a1*nc a2*nc b*Pc], with 0 < a1 < 1 < a2, and 1 < b
-Entryfct = @(n,param) (n <= param(4)).*param(6) + ...
-    (param(4) < n).*(n <= param(5)).*(param(6)+(n-param(4))./(param(5)-param(4)).*(MFDfct(param(5),param(1:3))-param(6))) + ...
-    (param(5) < n).*MFDfct(n,param(1:3));
+Entryfct = @paraboEntryFD;
+% Entryfct = @(n,param) (n <= param(4)).*param(6) + ...
+%     (param(4) < n).*(n <= param(5)).*(param(6)+(n-param(4))./(param(5)-param(4)).*(MFDfct(param(5),param(1:3))-param(6))) + ...
+%     (param(5) < n).*MFDfct(n,param(1:3));
+
+Exitfct = @paraboExitFD;
 
 % Reservoir definition
 
@@ -35,7 +38,6 @@ i = 1;
 Reservoir(i).Centroid = [0 1]; % virtual positioning [x y] for plotting purpose
 Reservoir(i).BorderPoints = [-1 1 1 -1 -1; 0 0 2 2 0];
 Reservoir(i).AdjacentRes = [2 3]; % adjacent reservoirs
-Reservoir(i).NetLength = 5000; % [m]
 Reservoir(i).FreeflowSpeed = 15; % [m/s]
 Reservoir(i).MaxProd = 3000; % [veh.m/s]
 Reservoir(i).MaxAcc = 1000; % [veh]
@@ -43,6 +45,7 @@ Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed; % for 
 Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
 Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
     0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
+Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
 
 
 % R2
@@ -51,7 +54,6 @@ i = 2;
 Reservoir(i).Centroid = [2 2]; % virtual positioning [x y]
 Reservoir(i).BorderPoints = [1 3 3 1 1; 1 1 3 3 1];
 Reservoir(i).AdjacentRes = [1 3 4]; % adjacent reservoirs
-Reservoir(i).NetLength = 5000; % [m]
 Reservoir(i).FreeflowSpeed = 15; % [m/s]
 Reservoir(i).MaxProd = 2000; % [veh.m/s]
 Reservoir(i).MaxAcc = 1000; % [veh]
@@ -59,6 +61,7 @@ Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed;
 Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
 Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
     0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
+Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
 
 
 % R3
@@ -67,7 +70,6 @@ i = 3;
 Reservoir(i).Centroid = [2 0]; % virtual positioning [x y]
 Reservoir(i).BorderPoints = [1 3 3 1 1; -1 -1 1 1 -1];
 Reservoir(i).AdjacentRes = [1 2 4]; % adjacent reservoirs
-Reservoir(i).NetLength = 5000; % [m]
 Reservoir(i).FreeflowSpeed = 15; % [m/s]
 Reservoir(i).MaxProd = 2000; % [veh.m/s]
 Reservoir(i).MaxAcc = 1000; % [veh]
@@ -75,6 +77,7 @@ Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed;
 Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
 Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
     0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
+Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
 
 
 % R4
@@ -83,7 +86,6 @@ i = 4;
 Reservoir(i).Centroid = [4 1]; % virtual positioning [x y]
 Reservoir(i).BorderPoints = [3 5 5 3 3; 0 0 2 2 0];
 Reservoir(i).AdjacentRes = [2 3]; % adjacent reservoirs
-Reservoir(i).NetLength = 5000; % [m]
 Reservoir(i).FreeflowSpeed = 15; % [m/s]
 Reservoir(i).MaxProd = 3000; % [veh.m/s]
 Reservoir(i).MaxAcc = 1000; % [veh]
@@ -91,6 +93,7 @@ Reservoir(i).CritAcc = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed;
 Reservoir(i).MFDfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd];
 Reservoir(i).EntryfctParam = [Reservoir(i).MaxAcc Reservoir(i).CritAcc Reservoir(i).MaxProd ...
     0.8*Reservoir(i).CritAcc 1*Reservoir(i).CritAcc 1*Reservoir(i).MaxProd];
+Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
 
 
 %%% MACRONODE
@@ -147,10 +150,21 @@ for r = 1:(NumRes-1)
         end
     end
 end
-% MacroNode(5).Capacity.Time = [0 1500 1800]; % [s]
-% MacroNode(5).Capacity.Data = [100 0.8 100]; % [veh/s]
 
-NumMacroNodes = i - 1;
+MacroNode(i).Type = 'origin';
+MacroNode(i).ResID = 2;
+MacroNode(i).Coord = Reservoir(2).Centroid + [0 0.2];
+MacroNode(i).Capacity.Time = 0; % [s]
+MacroNode(i).Capacity.Data = 100; % [veh/s]
+
+i = i + 1;
+MacroNode(i).Type = 'destination';
+MacroNode(i).ResID = 2;
+MacroNode(i).Coord = Reservoir(2).Centroid + [0 -0.2];
+MacroNode(i).Capacity.Time = 0; % [s]
+MacroNode(i).Capacity.Data = 100; % [veh/s]
+
+NumMacroNodes = i;
 
 % Append to Reservoir structure
 for r = 1:NumRes
@@ -218,6 +232,7 @@ for o = 1:NumOrigins % loop on all possible origins
         ODmacro(od).NumPossibleRoutes = 0;
         ODmacroID(o,d) = od;
         
+        % R1 to R4
         if Temp_orinodes(o) == 1 && Temp_destnodes(d) == 3
             ODmacro(od).NumPossibleRoutes = 4;
             iroute = 1;
@@ -233,12 +248,22 @@ for o = 1:NumOrigins % loop on all possible origins
             iroute = 3;
             ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3 4];
             ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 7 9 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000 1000];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 2000 1000];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
             iroute = 4;
             ODmacro(od).PossibleRoute(iroute).ResPath = [1 3 2 4];
             ODmacro(od).PossibleRoute(iroute).NodePath = [1 6 7 8 3];
             ODmacro(od).PossibleRoute(iroute).TripLengths = [2000 2000 2000 2000];
+            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
+        end
+        
+        % Internal trips R2
+        if Temp_orinodes(o) == 10 && Temp_destnodes(d) == 11
+            ODmacro(od).NumPossibleRoutes = 1;
+            iroute = 1;
+            ODmacro(od).PossibleRoute(iroute).ResPath = 2;
+            ODmacro(od).PossibleRoute(iroute).NodePath = [10 11];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = 1000;
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
         end
         

@@ -6,7 +6,7 @@ Simulation.TimeStep = 10; % Simulation time step [s]
 
 Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
 Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
-Simulation.TripbasedSimuFactor = 0.5; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
+Simulation.TripbasedSimuFactor = 0.7; % factor < 1 to scale down the demand level and increase the trip-based solver computation time
 Simulation.OutfileDebug = 0; % 0: save essential information / 1: save all simulation information for debug (heavier files)
 
 
@@ -17,6 +17,7 @@ ResDef
 
 Simulation.MFDfct = MFDfct;
 Simulation.Entryfct = Entryfct;
+Simulation.Exitfct = Exitfct;
 
 
 %% Assignment parameters

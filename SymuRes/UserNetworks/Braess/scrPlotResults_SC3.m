@@ -30,7 +30,7 @@ fontname = 'Times New Roman';
 iresu = 1;
 Results(iresu).Network = 'Braess'; % Choice of a network defined by user
 Results(iresu).Solver = 1; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC3'; % Simulation name
+Results(iresu).Name = 'SC31'; % Simulation name
 Results(iresu).Name2 = 'acc-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -52,7 +52,7 @@ Results(iresu).ODmacro = ODmacro;
 iresu = 2;
 Results(iresu).Network = 'Braess'; % Choice of a network defined by user
 Results(iresu).Solver = 2; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC3'; % Simulation name
+Results(iresu).Name = 'SC31'; % Simulation name
 Results(iresu).Name2 = 'trip-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -861,7 +861,7 @@ for iresu = 1:Nresu
         end
         hp1(i) = plot(Temp_t,Temp_TT,...
             'linestyle',sline{iresu},'color',lightencolor(cmap(iplot,:),clight(iresu)),'linewidth',LW(iresu));
-        strleg{i} = [Results(ResuList(iresu)).Name2 ' Route ' int2str(RoutesList(iplot)) ': [' int2str(Route(RoutesList(iplot)).ResPath) ']'];
+        strleg{i} = [Results(ResuList(iresu)).Name2 ' Route ' int2str(RoutesList(iplot)) ': [' int2str(Results(ResuList(iresu)).Route(RoutesList(iplot)).ResPath) ']'];
         i = i + 1;
     end
 end
