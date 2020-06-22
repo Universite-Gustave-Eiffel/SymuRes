@@ -1,23 +1,25 @@
-function q = cubicFD(k,param)
-% q = cubicFD(k,param)
+function P = cubicFD(n,param)
+% P = cubicFD(n,param)
 % Compute a third-order fundamental diagram
-% Valid only for 1/3*kj < kc < 2/3*kj, and kc must be different from kj/2
+% Valid only for 1/3*nj < nc < 2/3*nj, and nc must be different from nj/2
+%
+% Nov 2019 - Guilhem Mariotte
 %
 % INPUTS
-%---- k     : scalar or vector, vehicle density [veh/m], range of k must be between 0 and kj
-%---- param : vector, parameters of the FD function = [kj kc qc]
+%---- n     : scalar or vector, accumulation [veh], range of n must be between 0 and nj
+%---- param : vector, parameters of the FD function = [nj nc Pc]
 %
 % OUTPUTS
-%---- q : scalar or vector (same size as k), vehicle flow [veh/s]
+%---- P : scalar or vector (same size as n), production [veh.m/s]
 
-kj = param(1); % jam density (max. density) [veh/m]
-kc = param(2); % critical density [veh/m]
-qc = param(3); % critical flow (max. flow) [veh/s]
+nj = param(1); % jam accumulation (max. accumulation) [veh]
+nc = param(2); % critical accumulation [veh]
+Pc = param(3); % critical production (max. production) [veh.m/s]
 
-b = kj;
-c = (3*kc - 2*kj)./(2 - kj./kc);
-a = qc./(kc.*(kc - b).*(kc - c));
+b = nj;
+c = (3*nc - 2*nj)./(2 - nj./nc);
+a = Pc./(nc.*(nc - b).*(nc - c));
 
-q = a.*k.*(k - b).*(k - c);
+P = (0 <= n).*(n < nj).*a.*n.*(n - b).*(n - c);
 
 end

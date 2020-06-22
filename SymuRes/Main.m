@@ -1,4 +1,4 @@
-%% SYMURES 1.0 - A Multi-Reservoir MFD-Based Traffic Simulator
+%% SYMURES 1.1 - A Multi-Reservoir MFD-Based Traffic Simulator
 %--------------------------------------------------------------------------
 %
 % Authors
@@ -7,12 +7,12 @@
 % (Simulation platform design, traffic flow solvers, pre-processing
 % and post-processing modules)
 %
-% Sergio Batista - 
+% Sergio Batista -  sab21@nyu.edu
 % (DTA module, assignment and convergence loop)
 %
 % Version
 % -------
-% 1.0, October 2019
+% 1.1, April 2020
 
 clear all
 clc
@@ -25,14 +25,14 @@ addpath('MFDsolver/','Assignment/','UserNetworks/','PostProc/','Route/','Converg
 %--------------------------------------------------------------------------
 
 % Choice of a network defined by user
-Simulation.Network = 'Braess';
+Simulation.Network = 'Grid_9res';
 
 % Choice of the solver
 % 1: accbased / 2: tripbased
 Simulation.Solver = 1;
 
 % Simulation name
-Simulation.Name = 'SC3';
+Simulation.Name = 'SC21';
 
 
 %% Launch simulation
@@ -45,7 +45,9 @@ try
     % Simulation initialization
     %--------------------------
     tic;
-    disp 'MFD Simulation V5.0 - network and demand definition'
+    disp ' '
+    disp '********************************************'
+    disp 'SymuRes V1.1 - network and demand definition'
     
     addpath(['UserNetworks/' Simulation.Network '/'])
     SimulSettings
@@ -98,7 +100,6 @@ try
         Assignment.CurrentPeriodID = Assignment.CurrentPeriodID + 1;
         Assignment.CurrentTime = Assignment.Periods(Assignment.CurrentPeriodID);
     end
-    %Assignment.NumPeriods = Assignment.CurrentPeriodID - 1;
     
     disp ' '
     disp '*****************'

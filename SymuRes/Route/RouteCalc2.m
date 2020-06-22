@@ -1,10 +1,5 @@
 %% ROUTE CALCULATION
 %--------------------------------------------------------------------------
-% Build the Route structure for the simulation
-% If no predefined routes in DemDef, the routes are created with shortest
-% path calculations, otherwise, the previously defined routes are used
-%
-% Nov 2019 - Guilhem Mariotte
 
 % Simulation time
 Simulation.Time = 0:Simulation.TimeStep:Simulation.Duration; % vector of times [s]
@@ -16,6 +11,10 @@ NumPaths = Assignment.NumShortestPath;
 
 % Set default parameters (only those not set in SimulSettings already)
 SetDefaultParam
+
+% Calculate the number of modes
+Temp_carmode = 0;
+Temp_PTmode = 0;
 
 
 if Assignment.PredefRoute == 0
@@ -80,14 +79,6 @@ if Assignment.PredefRoute == 0
                 iroute = iroute + 1;
             end
         end
-        
-        % Sample demand to the simulation timestep (for the accbased solver)
-        for j = 1:length(ODmacro(od).Demand)
-            Temp_times = ODmacro(od).Demand(j).Time;
-            Temp_data = ODmacro(od).Demand(j).Data;
-            [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
-            ODmacro(od).Demand(j).Data2 = Temp_data; % demand sampled to the simulation timestep
-        end
     end
     
     % Number of routes
@@ -108,20 +99,29 @@ else
         o = Route(iroute).ResPath(1);
         d = Route(iroute).ResPath(end);
         p = length(ODmacro(od).RoutesID) + 1;
+        Route(iroute).Mode = Route(iroute).Demand0(1).Purpose;
+        if strcmp(Route(iroute).Demand0(j).Purpose,'cartrip')
+            Route(iroute).ModeID = 1;
+        elseif strcmp(Route(iroute).Demand0(j).Purpose,'publictransport')
+            Route(iroute).ModeID = 2;
+        end
         Route(iroute).ResOriginID = o;
         Route(iroute).ResDestinationID = d;
         Route(iroute).ResPathID = p;
         Route(iroute).NodeOriginID = Route(iroute).NodePath(1);
         Route(iroute).NodeDestinationID = Route(iroute).NodePath(end);
         Route(iroute).Length = sum(Route(iroute).TripLengths);
-        Temp_TT = 0;
+        Temp_TT = zeros(1,length(Route(iroute).TripLengths));
         i_p = 1;
         for r = Route(iroute).ResPath % loop on all reservoirs in path p
-            Temp_TT = Temp_TT + Route(iroute).TripLengths(i_p)/Reservoir(r).FreeflowSpeed;
+            ModeID = Route(iroute).ModeID;
+            % Temp_TT = Temp_TT + Route(iroute).TripLengths(i_p)/Reservoir(r).FreeflowSpeed(ModeID);
+            Temp_TT(i_p) = Route(iroute).TripLengths(i_p)/Reservoir(r).FreeflowSpeed(ModeID);
             i_p = i_p + 1;
         end
-        Route(iroute).TotalTime = Temp_TT; % route free-flow TT
-        Route(iroute).FreeFlowTravelTime = Temp_TT;
+        Route(iroute).TotalTime = sum(Temp_TT); % route free-flow TT
+        Route(iroute).FreeFlowTTPerReservoir = Temp_TT;
+        Route(iroute).FreeFlowTravelTime = sum(Temp_TT);
         Route(iroute).OldTT = Route(iroute).TotalTime;
         
         ODmacro(od).RoutesID = [ODmacro(od).RoutesID iroute];
@@ -129,18 +129,35 @@ else
         % Append the route demand to the corresponding OD demand
         for j = 1:length(Route(iroute).Demand0)
             if strcmp(Route(iroute).Demand0(j).Purpose,'cartrip')
+                Temp_carmode = 1;
                 Temp_times = Route(iroute).Demand0(j).Time;
                 Temp_data = Route(iroute).Demand0(j).Data;
                 [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
                 
+                i = 1;
                 Route(iroute).Demand = Temp_data; % for the acc-based solver
-                ODmacro(od).Demand(j).Time = Temp_times; % by default the time is discretized with the simul timestep
-                ODmacro(od).Demand(j).Data = ODmacro(od).Demand(j).Data + Temp_data;
+                ODmacro(od).Demand(i).Time = Temp_times; % by default the time is discretized with the simul timestep
+                ODmacro(od).Demand(i).Data = ODmacro(od).Demand(i).Data + Temp_data;
+            end
+            if strcmp(Route(iroute).Demand0(j).Purpose,'publictransport')
+                Temp_PTmode = 1;
+                Temp_times = Route(iroute).Demand0(j).Time;
+                Temp_data = Route(iroute).Demand0(j).Data;
+                [Temp_times, Temp_data] = stairfct(Temp_times,Temp_data,TimeStep,0,SimulationDuration);
+                
+                i = 2;
+                Route(iroute).Demand = Temp_data; % for the acc-based solver
+                ODmacro(od).Demand(i).Time = Temp_times; % by default the time is discretized with the simul timestep
+                ODmacro(od).Demand(i).Data = ODmacro(od).Demand(i).Data + Temp_data;
             end
         end
     end
     Route = rmfield(Route,'Demand0'); % delete this field to save memory
 end
+
+% Number of modes
+NumModes = Temp_carmode + Temp_PTmode;
+Simulation.NumModes = NumModes;
 
 % Calculating the total number of vehicules per OD, if the user wants to
 % update the trip lengths for method 1 and 2.
@@ -187,78 +204,97 @@ end
 % Append to the Reservoir structure
 for r = 1:NumRes
     Reservoir(r).TripLengthPerRoute = []; % trip lengths of the routes crossing the reservoir
+    Reservoir(r).FreeFlowTTPerRoute = []; % free flow travel times of the routes crossing the reservoir
     Reservoir(r).RoutesID = []; % routes ID crossing the reservoir
     Reservoir(r).RoutesPathIndex = []; % indexes of the reservoir in the paths
     Reservoir(r).OriginRes = []; % reservoir origins of the routes
     Reservoir(r).DestinationRes = []; % reservoir destinations of the routes
-    Reservoir(r).ODmacroID = []; % ODmacro IDs of the routes
+    Reservoir(r).ODmacroID = cell(1,NumModes); % ODmacro IDs of the routes
     
     Reservoir(r).RoutesNodeID = []; % entry and exit nodes ID for each route crossing the reservoir
-    Reservoir(r).NodeRoutesIndex = cell(1,length(Reservoir(r).MacroNodesID)); % routes crossing each node in the reservoir, indexes for Reservoir(i).RoutesID
+    Reservoir(r).NodeRoutesIndex = cell(NumModes,length(Reservoir(r).MacroNodesID)); % routes crossing each node in the reservoir, indexes for Reservoir(i).RoutesID
     
-    Reservoir(r).OriRoutesIndex = []; % routes originating in the reservoir, indexes for Reservoir(i).RoutesID
-    Reservoir(r).DestRoutesIndex = []; % routes ending in the reservoir, indexes for Reservoir(i).RoutesID
-    Reservoir(r).EntryRoutesIndex = []; % routes entering the reservoir, indexes for Reservoir(i).RoutesID
-    Reservoir(r).ExitRoutesIndex = []; % routes exiting the reservoir, indexes for Reservoir(i).RoutesID
+    Reservoir(r).OriRoutesIndex = cell(1,NumModes); % routes originating in the reservoir, indexes for Reservoir(i).RoutesID
+    Reservoir(r).DestRoutesIndex = cell(1,NumModes); % routes ending in the reservoir, indexes for Reservoir(i).RoutesID
+    Reservoir(r).EntryRoutesIndex = cell(1,NumModes); % routes entering the reservoir, indexes for Reservoir(i).RoutesID
+    Reservoir(r).ExitRoutesIndex = cell(1,NumModes); % routes exiting the reservoir, indexes for Reservoir(i).RoutesID
     
-    Reservoir(r).OriNodesIndex = []; % origin nodes in the reservoir, indexes for Reservoir(i).MacroNodesID
-    Reservoir(r).DestNodesIndex = []; % destination nodes in the reservoir, indexes for Reservoir(i).MacroNodesID
-    Reservoir(r).EntryNodesIndex = []; % border nodes for entry in the reservoir, indexes for Reservoir(i).MacroNodesID
-    Reservoir(r).ExitNodesIndex = []; % border nodes for exit of the reservoir, indexes for Reservoir(i).MacroNodesID
+    Reservoir(r).OriNodesIndex = cell(1,NumModes); % origin nodes in the reservoir, indexes for Reservoir(i).MacroNodesID
+    Reservoir(r).DestNodesIndex = cell(1,NumModes); % destination nodes in the reservoir, indexes for Reservoir(i).MacroNodesID
+    Reservoir(r).EntryNodesIndex = cell(1,NumModes); % border nodes for entry in the reservoir, indexes for Reservoir(i).MacroNodesID
+    Reservoir(r).ExitNodesIndex = cell(1,NumModes); % border nodes for exit of the reservoir, indexes for Reservoir(i).MacroNodesID
+    
+    Reservoir(r).ModeIndex = cell(1,NumModes); % mode of each route passing through the reservoir 1) Car 2) Bus
+    Reservoir(r).RouteMode = []; % mode of each route passing through the reservoir 1) Car 2) Bus
 end
 
 Temp_index = ones(1,NumRes);
 for iroute = 1:NumRoutes
     i_p = 1;
+    i_m = Route(iroute).ModeID;
     for r = Route(iroute).ResPath % loop on all reservoirs in the route
         Reservoir(r).TripLengthPerRoute = [Reservoir(r).TripLengthPerRoute Route(iroute).TripLengths(i_p)];
+        Reservoir(r).FreeFlowTTPerRoute = [Reservoir(r).FreeFlowTTPerRoute Route(iroute).FreeFlowTTPerReservoir(i_p)];
         Reservoir(r).RoutesID = [Reservoir(r).RoutesID iroute];
         Reservoir(r).RoutesPathIndex = [Reservoir(r).RoutesPathIndex i_p];
         Reservoir(r).OriginRes = [Reservoir(r).OriginRes Route(iroute).ResOriginID];
         Reservoir(r).DestinationRes = [Reservoir(r).DestinationRes Route(iroute).ResDestinationID];
-        Reservoir(r).ODmacroID = [Reservoir(r).ODmacroID Route(iroute).ODmacroID];
+        Reservoir(r).ODmacroID{i_m} = [Reservoir(r).ODmacroID{i_m} Route(iroute).ODmacroID];
         
         inode1 = Route(iroute).NodePath(i_p); % entry node ID
         inode2 = Route(iroute).NodePath(i_p+1); % exit node ID
         i_n1 = find(Reservoir(r).MacroNodesID == inode1);
         i_n2 = find(Reservoir(r).MacroNodesID == inode2);
         Reservoir(r).RoutesNodeID = [Reservoir(r).RoutesNodeID [inode1; inode2]];
-        Reservoir(r).NodeRoutesIndex{i_n1} = [Reservoir(r).NodeRoutesIndex{i_n1} Temp_index(r)];
-        Reservoir(r).NodeRoutesIndex{i_n2} = [Reservoir(r).NodeRoutesIndex{i_n2} Temp_index(r)];
+        Reservoir(r).NodeRoutesIndex{i_m,i_n1} = [Reservoir(r).NodeRoutesIndex{i_m,i_n1} Temp_index(r)];
+        Reservoir(r).NodeRoutesIndex{i_m,i_n2} = [Reservoir(r).NodeRoutesIndex{i_m,i_n2} Temp_index(r)];
         
         if strcmp(MacroNode(inode1).Type,'origin')
-            Reservoir(r).OriNodesIndex = [Reservoir(r).OriNodesIndex i_n1];
-            Reservoir(r).OriRoutesIndex = [Reservoir(r).OriRoutesIndex Temp_index(r)];
+            Reservoir(r).OriNodesIndex{i_m} = [Reservoir(r).OriNodesIndex{i_m} i_n1];
+            Reservoir(r).OriRoutesIndex{i_m} = [Reservoir(r).OriRoutesIndex{i_m} Temp_index(r)];
         elseif strcmp(MacroNode(inode1).Type,'border') || strcmp(MacroNode(inode1).Type,'externalentry')
-            Reservoir(r).EntryNodesIndex = [Reservoir(r).EntryNodesIndex i_n1];
-            Reservoir(r).EntryRoutesIndex = [Reservoir(r).EntryRoutesIndex Temp_index(r)];
+            Reservoir(r).EntryNodesIndex{i_m} = [Reservoir(r).EntryNodesIndex{i_m} i_n1];
+            Reservoir(r).EntryRoutesIndex{i_m} = [Reservoir(r).EntryRoutesIndex{i_m} Temp_index(r)];
         end
         if strcmp(MacroNode(inode2).Type,'destination')
-            Reservoir(r).DestNodesIndex = [Reservoir(r).DestNodesIndex i_n2];
-            Reservoir(r).DestRoutesIndex = [Reservoir(r).DestRoutesIndex Temp_index(r)];
+            Reservoir(r).DestNodesIndex{i_m} = [Reservoir(r).DestNodesIndex{i_m} i_n2];
+            Reservoir(r).DestRoutesIndex{i_m} = [Reservoir(r).DestRoutesIndex{i_m} Temp_index(r)];
         elseif strcmp(MacroNode(inode2).Type,'border') || strcmp(MacroNode(inode2).Type,'externalexit')
-            Reservoir(r).ExitNodesIndex = [Reservoir(r).ExitNodesIndex i_n2];
-            Reservoir(r).ExitRoutesIndex = [Reservoir(r).ExitRoutesIndex Temp_index(r)];
+            Reservoir(r).ExitNodesIndex{i_m} = [Reservoir(r).ExitNodesIndex{i_m} i_n2];
+            Reservoir(r).ExitRoutesIndex{i_m} = [Reservoir(r).ExitRoutesIndex{i_m} Temp_index(r)];
+        end
+        if strcmp(Route(iroute).Mode, 'cartrip')
+            Reservoir(r).ModeIndex{1} = [Reservoir(r).ModeIndex{1} Temp_index(r)];
+        elseif strcmp(Route(iroute).Mode, 'publictransport')
+            Reservoir(r).ModeIndex{2} = [Reservoir(r).ModeIndex{2} Temp_index(r)];
+        end
+        if strcmp(Route(iroute).Mode, 'cartrip')
+            Reservoir(r).RouteMode = [Reservoir(r).RouteMode 1];
+        elseif strcmp(Route(iroute).Mode, 'publictransport')
+            Reservoir(r).RouteMode = [Reservoir(r).RouteMode 2];
         end
         Temp_index(r) = Temp_index(r) + 1;
         i_p = i_p + 1;
+        
     end
 end
 for r = 1:NumRes
-    if ~isempty(Reservoir(r).ODmacroID)
-        Reservoir(r).ODmacroID = unique(Reservoir(r).ODmacroID); % remove repetitions
-    end
-    if ~isempty(Reservoir(r).OriNodesIndex)
-        Reservoir(r).OriNodesIndex = unique(Reservoir(r).OriNodesIndex);
-    end
-    if ~isempty(Reservoir(r).EntryNodesIndex)
-        Reservoir(r).EntryNodesIndex = unique(Reservoir(r).EntryNodesIndex);
-    end
-    if ~isempty(Reservoir(r).DestNodesIndex)
-        Reservoir(r).DestNodesIndex = unique(Reservoir(r).DestNodesIndex);
-    end
-    if ~isempty(Reservoir(r).ExitNodesIndex)
-        Reservoir(r).ExitNodesIndex = unique(Reservoir(r).ExitNodesIndex);
+    for m = 1:NumModes
+        if ~isempty(Reservoir(r).ODmacroID{m})
+            Reservoir(r).ODmacroID{m} = unique(Reservoir(r).ODmacroID{m}); % remove repetitions
+        end
+        if ~isempty(Reservoir(r).OriNodesIndex{m})
+            Reservoir(r).OriNodesIndex{m} = unique(Reservoir(r).OriNodesIndex{m});
+        end
+        if ~isempty(Reservoir(r).EntryNodesIndex{m})
+            Reservoir(r).EntryNodesIndex{m} = unique(Reservoir(r).EntryNodesIndex{m});
+        end
+        if ~isempty(Reservoir(r).DestNodesIndex{m})
+            Reservoir(r).DestNodesIndex{m} = unique(Reservoir(r).DestNodesIndex{m});
+        end
+        if ~isempty(Reservoir(r).ExitNodesIndex{m})
+            Reservoir(r).ExitNodesIndex{m} = unique(Reservoir(r).ExitNodesIndex{m});
+        end
     end
 end
 for iroute = 1:NumRoutes
