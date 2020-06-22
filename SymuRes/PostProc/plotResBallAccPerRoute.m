@@ -144,8 +144,8 @@ for r = ResList
     angstart = 0;
     k_r = 1;
     for iroute = RoutesList
-        i_r = find(Reservoir(r).RoutesID == iroute);
-        if ~isempty(i_r)
+        i_r = Route(iroute).ResRouteIndex(r);
+        if ~isempty(i_r) && i_r > 0
             accratio = Reservoir(r).AccPerRoute(i_r,timeID)/Reservoir(r).MaxAcc;
             angend = angstart + accratio*2*pi;
             th = angstart:0.01:angend;

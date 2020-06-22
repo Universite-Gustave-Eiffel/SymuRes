@@ -1,20 +1,23 @@
-function plotRoutes(Link,Reservoir,ResList,coloringres,Route,RoutesList,coloringroutes,sizingroutes,opts)
-% plotRoutes(Link,Reservoir,ResList,coloringres,Route,RoutesList,coloringroutes,sizingroutes,opts)
+function plotRoutes(Link,Reservoir,ResList,coloringres,MacroNode,NodesList,coloringnodes,Route,RoutesList,coloringroutes,sizingroutes,opts)
+% plotRoutes(Link,Reservoir,ResList,coloringres,MacroNode,NodesList,coloringnodes,Route,RoutesList,coloringroutes,sizingroutes,opts)
 % Plot the real network configuration with reservoirs and a set of given
-% routes represented by smooth lines. The line thickness represent the
-% demand on the route
+% routes represented by smooth lines.
 %
 % INPUTS
 %---- Link           : Link structure, put [] if no links to plot
 %---- Reservoir      : Reservoir structure
 %---- ResList        : vector, reservoir IDs
 %---- coloringres    : boolean, 1: different colors for the reservoirs
+%---- MacroNode      : MacroNode structure
+%---- NodesList      : vector, macro nodes IDs
+%---- coloringnodes  : boolean, 1: different colors by node types
 %---- Route          : Route structure
 %---- RoutesList     : vector, route IDs
 %---- coloringroutes : boolean, 1: different colors for the routes
+%---- sizingroutes   : boolean, 1: route thickness depends on route mean demand
 %---- opts           : options, structure with fields 'fontname', 'fontsize',
-%                      'linewidth', 'colormap', 'rescolor', 'textcolor',
-%                      'plotlegend'
+%                      'linewidth', 'markersize', 'colormap', 'rescolor', 'textcolor',
+%                      'plotlegend', 'exactsmooth', 'nodepath'
 
 NbR = length(ResList);
 NbRoutes = length(RoutesList);
@@ -34,6 +37,11 @@ if isfield(opts,'linewidth')
     LW = opts.linewidth;
 else
     LW = 2; % default
+end
+if isfield(opts,'markersize')
+    MS = opts.markersize;
+else
+    MS = 10; % default
 end
 if isfield(opts,'colormap')
     cmap0 = opts.colormap;
@@ -55,6 +63,16 @@ if isfield(opts,'plotlegend')
 else
     plotlegend = 0; % default
 end
+if isfield(opts,'exactsmooth')
+    exactsmooth = opts.exactsmooth;
+else
+    exactsmooth = 1; % default
+end
+if isfield(opts,'nodepath')
+    plotnodepath = opts.nodepath;
+else
+    plotnodepath = 1; % default
+end
 
 % Lines
 line0 = {'-', '--', ':', '-.'};
@@ -72,6 +90,17 @@ if coloringres == 1
     cmap_res = cmap0(colorIDlist,:);
 else
     cmap_res = ones(NbR,1)*rescolor;
+end
+
+% Macro node colors
+if coloringnodes == 1
+    color1 = cmap0(3,:);
+    color2 = cmap0(1,:);
+    color3 = cmap0(4,:);
+else
+    color1 = [0 0 0];
+    color2 = [0 0 0];
+    color3 = [0 0 0];
 end
 
 % Route colors and lines
@@ -147,15 +176,24 @@ hp = zeros(1,NbRoutes);
 strleg = cellstr(int2str(zeros(NbRoutes,1)));
 i = 1;
 for iroute = RoutesList
-    if routedem(i) > 0
+    if routedem(i) > 0 || sizingroutes == 0
         colori = cmap_routes(i,:);
         listx = [];
         listy = [];
-        for r = Route(iroute).ResPath
-            xr = Reservoir(r).Centroid(1);
-            yr = Reservoir(r).Centroid(2);
-            listx = [listx xr];
-            listy = [listy yr];
+        if plotnodepath == 1
+            for m = Route(iroute).NodePath
+                xm = MacroNode(m).Coord(1);
+                ym = MacroNode(m).Coord(2);
+                listx = [listx xm];
+                listy = [listy ym];
+            end
+        else
+            for r = Route(iroute).ResPath
+                xr = Reservoir(r).Centroid(1);
+                yr = Reservoir(r).Centroid(2);
+                listx = [listx xr];
+                listy = [listy yr];
+            end
         end
         
         % Smooth the route line
@@ -170,9 +208,16 @@ for iroute = RoutesList
             xpath = xr + 0.7*d.*th./thmax.*cos(th);
             ypath = yr + 0.7*d.*th./thmax.*sin(th);
         else
-            alpha1 = 0.5; % for way-back turns
-            alpha2 = 1.7; % for direct turns
-            [xpath, ypath] = smoothroute(listx,listy,50,alpha1,alpha2);
+            if exactsmooth == 0
+                % The smoothed route does not necessarily connect all the points
+                alpha1 = 0.5; % for way-back turns
+                alpha2 = 1.7; % for direct turns
+                [xpath, ypath] = smoothroute(listx,listy,50,alpha1,alpha2);
+            else
+                % The smoothed route connects all the points (exact interpolation)
+                tension = 0.5; % smooth coeff
+                [xpath, ypath] = smoothroute2(listx,listy,50,tension);
+            end
         end
         if sizingroutes == 1
             LWroute = minLW + routedem(i)/maxdem*(maxLW - minLW);
@@ -185,6 +230,20 @@ for iroute = RoutesList
     end
     
     i = i + 1;
+end
+
+% Plot the macro nodes
+MS1 = MS;
+MS2 = 1.5*MS;
+MS3 = MS;
+for i = NodesList
+    if strcmp(MacroNode(i).Type,'origin') || strcmp(MacroNode(i).Type,'externalentry')
+        plot(MacroNode(i).Coord(1),MacroNode(i).Coord(2),'o','color',color2,'MarkerFaceColor',color2,'markersize',MS2)
+    elseif strcmp(MacroNode(i).Type,'destination') || strcmp(MacroNode(i).Type,'externalexit')
+        plot(MacroNode(i).Coord(1),MacroNode(i).Coord(2),'o','color',color1,'MarkerFaceColor',color1,'markersize',MS1)
+    else
+        plot(MacroNode(i).Coord(1),MacroNode(i).Coord(2),'o','color',color3,'MarkerFaceColor',color3,'markersize',MS3)
+    end
 end
 
 % Plot the reservoir numbers
