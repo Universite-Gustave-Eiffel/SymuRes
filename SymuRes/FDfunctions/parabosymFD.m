@@ -1,19 +1,24 @@
-function q = parabosymFD(k,param)
-% q = parabosymFD(k,param)
+function P = parabosymFD(n,param)
+% P = parabosymFD(n,param)
 % Compute the parabolic Fundamental Diagram function (symmetrical)
 % Greenshields Model (1935)
-% !! in fact only kj and qc are required to define its shape (kc = kj/2)
+% Only nj and Pc are required to define its shape (nc = nj/2)
+%
+% Nov 2019 - Guilhem Mariotte
 %
 % INPUTS
-%---- k     : scalar or vector, vehicle density [veh/m], range of k must be between 0 and kj
-%---- param : vector, parameters of the FD function = [kj kc qc]
+%---- n     : scalar or vector, accumulation [veh], range of n must be between 0 and nj
+%---- param : vector, parameters of the FD function = [nj nc Pc]
 %
 % OUTPUTS
-%---- q : scalar or vector (same size as k), vehicle flow [veh/s]
+%---- P : scalar or vector (same size as n), production [veh.m/s]
 
-kj = param(1); % jam density (max. density) [veh/m]
-qc = param(3); % critical flow (max. flow) [veh/s]
+nj = param(1); % jam accumulation (max. accumulation) [veh]
+nc = nj/2; % critical accumulation [veh]
+Pc = param(3); % critical production (max. production) [veh.m/s]
 
-q = 4*qc/kj^2*k.*(kj - k).^2;
+u = 2*Pc/nc; % free-flow speed [m/s]
+
+P = (0 <= n).*(n < nj).*u.*n.*(1 - n./nj);
 
 end

@@ -1,49 +1,34 @@
-function q = pwlinearFD(k,param)
-% q = pwlinearFD(k,param)
+function P = pwlinearFD(n,param)
+% P = pwlinearFD(n,param)
 % Compute the piecewise linear Fundamental Diagram function
 %
+% Nov 2019 - Guilhem Mariotte
+%
 % INPUTS
-%---- k     : scalar or vector, vehicle density [veh/m], range of k must be between 0 and kj
+%---- n     : scalar or vector, accumulation [veh]
 %---- param : Npts-by-2 matrix, points to define the piecewise linear FD
-%             column 1 contains the densities in increasing order [veh/m]
-%             column 2 contains the flows corresponding to each density [veh/s]
+%             param(:,1) contains the ni of branch i start point [veh]
+%             param(:,2) contains the Pi of branch i start point [veh.m/s]
 %
 % OUTPUTS
-%---- q : scalar or vector (same size as k), vehicle flow [veh/s]
+%---- P : scalar or vector (same size as n), production [veh.m/s]
 
-kj = param(end,1); % jam density (max. density) [veh/m]
-pts = param(1:(end-1),:);
+ni = param(:,1); % abscissa of branch start point [veh]
+Pi = param(:,2); % ordinate of branch start point [veh.m/s]
 
-Npts = size(pts,1); % number of points for the definition of the FD
-kc = pts(:,1);
-qc = pts(:,2);
-q = zeros(1,length(k));
-
-if kc == sort(kc) % test if kc is sorted by increasing order
-    kc0 = [0 kc' kj];
-    qc0 = [0 qc' 0];
-    dqc0 = derivbis(kc0,qc0);
-    if dqc0 == sort(dqc0,'descend') % test if qc really gives a concave FD
-        if Npts == 1
-            kc1 = kc(1);
-            qc1 = qc(1);
-            q = (k <= kc1).*(qc1/kc1.*k) + (kc1 < k).*(k < kj).*(qc1 - qc1/(kj - kc1).*(k - kc1));
-        else
-            for i = 1:(Npts-1)
-                kc1 = kc(i);
-                kc2 = kc(i+1);
-                qc1 = qc(i);
-                qc2 = qc(i+1);
-                q = q + (kc1 < k).*(k <= kc2).*(qc1 + (qc2 - qc1)/(kc2 - kc1).*(k - kc1));
-            end
-            kc1 = kc(1);
-            qc1 = qc(1);
-            q = q + (k <= kc1).*(qc1/kc1.*k);
-            kc2 = kc(Npts);
-            qc2 = qc(Npts);
-            q = q + (kc2 < k).*(k < kj).*(qc2 - qc2/(kj - kc2).*(k - kc2));
-        end
-    end
+Npts = length(ni);
+wi = zeros(Npts-1,1);
+Pi0 = zeros(Npts-1,1);
+for i = 1:(Npts-1)
+    wi(i) = (Pi(i+1) - Pi(i)) / (ni(i+1) - ni(i));
+    Pi0(i) = (Pi(i)*ni(i+1) - Pi(i+1)*ni(i)) / (ni(i+1) - ni(i));
 end
+
+wi = wi*ones(1,length(n));
+Pi0 = Pi0*ones(1,length(n));
+n = ones(size(wi,1),1)*n;
+
+P = min(wi.*n + Pi0);
+P = (0 <= P).*P;
 
 end

@@ -1,22 +1,24 @@
-function q = expoFD(k,param)
-% q = expoFD(k,param)
+function P = expoFD(n,param)
+% P = expoFD(n,param)
 % Compute the exponential Fundamental Diagram function (Drake et al., 1967)
 % Northwestern Model (1967)
-% !! in fact only kc and qc are required to define its shape
+% Only nc and Pc are required to define its shape
+%
+% Nov 2019 - Guilhem Mariotte
 %
 % INPUTS
-%---- k     : scalar or vector, vehicle density [veh/m], range of k must be between 0 and kj
-%---- param : vector, parameters of the FD function = [kj kc qc]
+%---- n     : scalar or vector, accumulation [veh], range of n must be between 0 and nj
+%---- param : vector, parameters of the FD function = [nj nc Pc]
 %
 % OUTPUTS
-%---- q : scalar or vector (same size as k), vehicle flow [veh/s]
+%---- P : scalar or vector (same size as n), production [veh.m/s]
 
-kj = param(1); % jam density (max. density) [veh/m]
-kc = param(2); % critical density [veh/m]
-qc = param(3); % critical flow (max. flow) [veh/s]
+nj = param(1); % jam accumulation (max. accumulation) [veh]
+nc = param(2); % critical accumulation [veh]
+Pc = param(3); % critical production (max. production) [veh.m/s]
 
-u = qc/kc; % free-flow speed [m/s]
+u = Pc/nc; % free-flow speed [m/s]
 
-q = (k < kj).*u.*k.*exp(-(k./kc).^2/2);
+P = (0 <= n).*(n < nj).*u.*n.*exp(-(n./nc).^2/2);
 
 end

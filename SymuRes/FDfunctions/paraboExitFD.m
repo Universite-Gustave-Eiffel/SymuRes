@@ -1,7 +1,6 @@
-function P = semiparaboFD2(n,param)
-% P = semiparaboFD2(n,param)
-% Compute the semi-parabolic Fundamental Diagram function
-% (n < nc: linear part, n > nc: parabolic part)
+function P = paraboExitFD(n,param)
+% P = paraboExitFD(n,param)
+% Compute the parabolic exit function (from the parabolic FD model)
 %
 % Nov 2019 - Guilhem Mariotte
 %
@@ -16,9 +15,6 @@ nj = param(1); % jam accumulation (max. accumulation) [veh]
 nc = param(2); % critical accumulation [veh]
 Pc = param(3); % critical production (max. production) [veh.m/s]
 
-u = Pc/nc; % free-flow speed [m/s]
-
-P = (0 <= n).*(n <= nc).* u.*n + ...
-    (nc < n).*(n < nj).*  (Pc./(nj - nc).^2.*(nj - n).*(nj + n - 2*nc));
+P = (0 <= n).*(n <= nc).*paraboFD(n,param) + (nc < n).*(n < nj).*Pc;
 
 end

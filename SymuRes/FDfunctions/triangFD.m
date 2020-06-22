@@ -1,21 +1,24 @@
-function q = triangFD(k,param)
-% q = triangFD(k,param)
-% Compute the Triangular Fundamental Diagram (TFD) function
+function P = triangFD(n,param)
+% P = triangFD(n,param)
+% Compute the triangular Fundamental Diagram function
+%
+% Nov 2019 - Guilhem Mariotte
 %
 % INPUTS
-%---- k     : scalar or vector, vehicle density [veh/m], range of k must be between 0 and kj
-%---- param : vector, parameters of the FD function = [kj kc qc]
+%---- n     : scalar or vector, accumulation [veh], range of n must be between 0 and nj
+%---- param : vector, parameters of the FD function = [nj nc Pc]
 %
 % OUTPUTS
-%---- q : scalar or vector (same size as k), vehicle flow [veh/s]
+%---- P : scalar or vector (same size as n), production [veh.m/s]
 
-kj = param(1); % jam density (max. density) [veh/m]
-kc = param(2); % critical density [veh/m]
-qc = param(3); % critical flow (max. flow) [veh/s]
+nj = param(1); % jam accumulation (max. accumulation) [veh]
+nc = param(2); % critical accumulation [veh]
+Pc = param(3); % critical production (max. production) [veh.m/s]
 
-u = qc/kc; % free-flow speed [m/s]
-w = qc/(kj - kc); % congestion wave speed [m/s]
+u = Pc/nc; % free-flow speed [m/s]
+w = Pc/(nj - nc); % congestion wave speed [m/s]
 
-q = (k <= kc).*(u.*k) + (k > kc).*(qc - w.*(k - kc));
+P = (0 <= n).*(n <= nc).* u.*n + ...
+    (nc < n).*(n < nj).*  (Pc - w.*(n - nc));
 
 end
