@@ -52,6 +52,9 @@ if Assignment.CurrentPeriodID == 1
         
         % Entry demand cumulative count for the FIFO merge
         Reservoir(r).NinDemandPerRoute = zeros(Temp_Nroutes,NumTimes);
+        
+        % Queue factor for the queuedyn exit model
+        Reservoir(r).QueueFactor = 1;
     end
     for iroute = 1:NumRoutes
         Route(iroute).TravelTime = zeros(1,NumTimes);
@@ -98,6 +101,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         % Queue factor to adjust the MFD shape due to queuing accumulation
         % (= 1 in case of no queues)
         Temp_QF = 1 - sum(Reservoir(r).AccQueuePerRoute(:,itime))/Reservoir(r).MaxAcc;
+        Reservoir(r).QueueFactor = Temp_QF;
         
         % Reservoir Rr current accumulation and characteristics
         Temp_nr = sum(Reservoir(r).AccCircuPerRoute(:,itime));
@@ -153,6 +157,9 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
     % Inflow supply calculation
     %--------------------------
     for r = 1:NumRes % loop on all reservoirs
+        
+        % Queue factor
+        Temp_QF = Reservoir(r).QueueFactor;
         
         % Inflow demand for all routes
         Temp_Nroutes = length(Reservoir(r).RoutesID);

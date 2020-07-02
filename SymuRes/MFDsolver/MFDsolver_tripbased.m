@@ -52,8 +52,8 @@ for iroute = 1:NumRoutes
         Temp_routetimeID(iroute) = Temp_istart;
         
         for j = 1:length(ODmacro(od).Demand)
-            Temp_demtimes = ODmacro(od).Demand(j).Time;
-            Temp_demdata = Simulation.TripbasedSimuFactor.*ODmacro(od).Demand(j).Data;
+            Temp_demtimes = Simulation.Time;
+            Temp_demdata = Simulation.TripbasedSimuFactor.*Route(iroute).Demand;
             it1 = 1;
             while it1 <= length(Temp_demtimes) && Temp_demtimes(it1) < Temp_StartTime
                 it1 = it1 + 1;
@@ -67,11 +67,7 @@ for iroute = 1:NumRoutes
             
             if Assignment.CurrentPeriodID == 1
                 Temp_demtimes12 = Temp_demtimes(it1:it2);
-                if Assignment.PredefRoute == 0
-                    Temp_demdata12 = Route(iroute).AssignCoeff*Temp_demdata(it1:it2);
-                else
-                    Temp_demdata12 = Simulation.TripbasedSimuFactor.*Route(iroute).Demand(it1:it2);
-                end
+                Temp_demdata12 = Temp_demdata(it1:it2);
                 Temp_times = demdiscr(Temp_EndTime,1,Temp_demtimes12,Temp_demdata12);
                 if isempty(Temp_times)
                     Route(iroute).PrevDemandTime = Temp_demtimes12;
@@ -83,10 +79,10 @@ for iroute = 1:NumRoutes
             else
                 if it1 == it2
                     Temp_demtimes12 = [Route(iroute).PrevDemandTime Temp_StartTime];
-                    Temp_demdata12 = [Route(iroute).PrevDemandData Route(iroute).AssignCoeff*Temp_demdata(it1)];
+                    Temp_demdata12 = [Route(iroute).PrevDemandData Temp_demdata(it1)];
                 else
                     Temp_demtimes12 = [Route(iroute).PrevDemandTime Temp_StartTime Temp_demtimes((it1+1):it2)];
-                    Temp_demdata12 = [Route(iroute).PrevDemandData Route(iroute).AssignCoeff*Temp_demdata(it1) Route(iroute).AssignCoeff*Temp_demdata((it1+1):it2)];
+                    Temp_demdata12 = [Route(iroute).PrevDemandData Temp_demdata(it1) Temp_demdata((it1+1):it2)];
                 end
                 Temp_times = demdiscr(Temp_EndTime-Temp_demtimes12(1),1,[0 Temp_demtimes12-Temp_demtimes12(1)],[0 Temp_demdata12]);
                 Temp_times = Temp_times + Temp_demtimes12(1);
@@ -234,7 +230,6 @@ if Assignment.CurrentPeriodID == 1
         % Simulation variable initialization
         if Temp_Nroutes > 0
             Reservoir(r).VehList = [];
-            Reservoir(r).VehListPerRoute = cell(1,Temp_Nroutes);
             Reservoir(r).FirstVehPerRoute = zeros(1,Temp_Nroutes);
             Reservoir(r).DemandTimeIndexPerRoute = ones(1,Temp_Nroutes);
             Reservoir(r).DemandTimeIndex = 1;
@@ -399,14 +394,6 @@ while CurrentTime < Temp_EndTime
     % Print simulation state
     if floor(NextEvent.VehID/1000) == NextEvent.VehID/1000
         fprintf('%s%3.3f \t %s%i \t %s%i \n','time=',CurrentTime,'nextevent=',NextEvent.Type,'vehID=',NextEvent.VehID)
-    end
-    
-    for r = 1:NumRes
-        for i_r = 1:length(Reservoir(r).RoutesID)
-            if sum(ismember(Reservoir(r).VehListPerRoute{i_r},Reservoir(r).VehList)) ~= length(Reservoir(r).VehListPerRoute{i_r})
-                keyboard
-            end
-        end
     end
     
     
@@ -801,7 +788,7 @@ while CurrentTime < Temp_EndTime
             Temp_nr = Reservoir(r).CurrentAcc;
             Temp_scf = Simulation.TripbasedSimuFactor;
             Temp_param = Reservoir(r).EntryfctParam;
-            Temp_prodsupply = Entryfct(Temp_nr,Temp_scf*Temp_param);
+            Temp_prodsupply = Entryfct(Temp_nr,Temp_scf*Temp_param) - Reservoir(r).InternalProd; % SCF already included in InternalProd
             Temp_indexes = Reservoir(r).EntryRoutesIndex;
             Temp_Lrp = Reservoir(r).TripLengthPerRoute(Temp_indexes);
             Temp_proddem = Temp_Lrp.*Temp_qinr2(Temp_indexes);
@@ -816,7 +803,7 @@ while CurrentTime < Temp_EndTime
             if sum(Temp_proddem) < Temp_prodsupply
                 Temp_flowsupply = Inf;
             else
-                Temp_flowsupply = (Temp_prodsupply - Reservoir(r).InternalProd)/Temp_Lr_entry;
+                Temp_flowsupply = Temp_prodsupply/Temp_Lr_entry;
             end
             Temp_demtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
             Temp_lasttimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes);
