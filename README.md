@@ -1,7 +1,7 @@
 # SymuRes
 A Multi-Reservoir MFD-Based Traffic Simulation Platform
 
-Version 1.1 - 2020
+Version 2.0 - 2020
 
 ![Image](img_symures.png "image")
 
@@ -20,6 +20,9 @@ Authors
 
 - Sergio F. A. Batista - sab21@nyu.edu
 (DTA module, assignment and convergence loop)
+
+- Mahendra Paipuri - mahendra.paipuri@univ-eiffel.fr
+(Multimodality, 3D-MFD functions)
 
 Designing a simulation
 ----------------------
@@ -68,3 +71,7 @@ Bug fixes in the trip-based solver, add FIFO merge model in the acc-based solver
 - plotRoutes.m: same modification as in plotMacroNodes.m, and now can plot macro nodes
 - plotLinkReservoirs.m: plot links and nodes for the given reservoir list only (instead of the full network)
 - Main.m: minor typo fixes
+
+V2.0 - July 2020
+----------------
+Multimodality with the nD-MFD concept (n modes)
