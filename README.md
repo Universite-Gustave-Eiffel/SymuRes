@@ -50,12 +50,14 @@ Bug fixes in the trip-based solver, add FIFO merge model in the acc-based solver
 - MFDsolver folder: rename and typo fixes for the merge functions
 - mergetimeFair: return effective times instead of supply times
 - MFDsolver_accbased.m: remove route demand calculation at the beginning (now in AssignCalc.m)
+- MFDsolver_accbased.m: fix the queue factor update for the queuedyn model
 - MFDsolver_accbased.m: add demfifo option
 - MFDsolver_tripbased.m: fix exit supply times per route equal to global entry supply time (FIFO behavior in a succession of reservoirs)
 - MFDsolver_tripbased.m: remove waiting veh list per route, keep the global list and add FirstVehPerRoute for exit per route
 - MFDsolver_tripbased.m: fix desired entry times within a route (equal to desired exit times of prev reservoir)
 - MFDsolver_tripbased.m: fix entry times calculation for demfifo
 - MFDsolver_tripbased.m: missing simulation factor on some variables
+- MFDsolver_tripbased.m: use directly route demand at the beginning (because now always calculated in AssignCalc.m)
 - MFDsolver_tripbased.m: remove MFD linear approximation and apply the simulation factor on MFD param directly
 - FDfunctions folder: change variable names of all functions (only inside the functions)
 - FDfunctions folder: add conditions (0 <= n).*(n < nj) for the function domain definition
