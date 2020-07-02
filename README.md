@@ -84,3 +84,4 @@ Add multimodality with the nD-MFD concept (n modes)
 - MFDsolver_accbased.m and MFDsolver_tripbased.m: new 'mode' ID for each route
 - MFDsolver_accbased.m and MFDsolver_tripbased.m: Acc and MeanSpeed fields now with a distinction on the mode (i.e. acc per mode instead of total acc, idem for mean speed)
 - MFDsolver_accbased.m and MFDsolver_tripbased.m: add loops on the number of modes at every loop on the routes
+- PostProc_accbased.m and PostProc_tripbased.m: add the field AccPerMode to turn the field Acc back to total accumulation (as in V1.1)
