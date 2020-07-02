@@ -4,7 +4,7 @@
 % Calculate the new possible assignment or path flow coefficients for each route
 % with a choice model, and update the effective coefficient with the MSA formula.
 %
-% Nov 2019 - Guilhem Mariotte
+% June 2020 - Guilhem Mariotte
 
 SimulationDuration = Simulation.Duration;
 TimeStep = Simulation.TimeStep;
@@ -123,23 +123,26 @@ fprintf('%s\n',' ')
 
 if Assignment.CurrentPeriodID == 1
     for r = 1:NumRes
-        Reservoir(r).AvgTripLength = zeros(1,NumTimes);
-        Temp_demtot = 0;
-        Temp_demLtrip = 0;
+        Reservoir(r).AvgTripLength = zeros(NumModes,NumTimes);
+        Temp_demtot = zeros(1,NumModes);
+        Temp_demLtrip = zeros(1,NumModes);
         i_r = 1;
         for iroute = Reservoir(r).RoutesID
             od = Route(iroute).ODmacroID;
-            Temp_dem = Route(iroute).AssignCoeff*ODmacro(od).Demand(1).Data(1);
+            i_m = Route(iroute).ModeID;
+            Temp_dem = Route(iroute).Demand(1);
             Temp_Ltrip = Reservoir(r).TripLengthPerRoute(i_r);
             
-            Temp_demtot = Temp_demtot + Temp_dem;
-            Temp_demLtrip = Temp_demLtrip + Temp_Ltrip*Temp_dem;
+            Temp_demtot(i_m) = Temp_demtot(i_m) + Temp_dem;
+            Temp_demLtrip(i_m) = Temp_demLtrip(i_m) + Temp_Ltrip*Temp_dem;
             i_r = i_r + 1;
         end
-        if Temp_demtot > 0
-            Reservoir(r).AvgTripLength(1) = Temp_demLtrip/Temp_demtot;
-        else
-            Reservoir(r).AvgTripLength(1) = mean(Reservoir(r).TripLengthPerRoute);
+        for i_m = 1:NumModes
+            if Temp_demtot(i_m) > 0
+                Reservoir(r).AvgTripLength(i_m,1) = Temp_demLtrip(i_m)/Temp_demtot(i_m);
+            else
+                Reservoir(r).AvgTripLength(i_m,1) = mean(Reservoir(r).TripLengthPerRoute);
+            end
         end
     end
 end
