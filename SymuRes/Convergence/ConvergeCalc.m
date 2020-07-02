@@ -190,11 +190,11 @@ if Assignment.HasConverged == 1
         Temp_listres = [];
         for r = 1:NumRes
             if Simulation.Solver == 1
-                Temp_acctest = sum(Reservoir(r).Acc >= Reservoir(r).MaxAcc);
+                Temp_acctest = sum(sum(Reservoir(r).Acc >= Reservoir(r).MaxAcc));
             else
                 Temp_acctest = 0;
             end
-            Temp_speedtest = sum(Reservoir(r).MeanSpeed < 0);
+            Temp_speedtest = sum(sum(Reservoir(r).MeanSpeed < 0));
             if Temp_acctest > 0 || Temp_speedtest > 0
                 Temp_listres = [Temp_listres r];
             end
