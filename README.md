@@ -74,4 +74,13 @@ Bug fixes in the trip-based solver, add FIFO merge model in the acc-based solver
 
 V2.0 - July 2020
 ----------------
-Multimodality with the nD-MFD concept (n modes)
+Add multimodality with the nD-MFD concept (n modes)
+
+- AssignCalc.m: account for route mode in the initial estimation of the average trip length
+- ConvergeCalc.m: account for multiple modes in the variables when checking for gridlocks during the simulation
+- FDfunctions folder: add a new 3D parabolic model (with normalization parameters in the function def)
+- RouteCalc.m: reorganize with the possibility of having multiple modes
+- RouteCalc.m: in Reservoir, all the fields like 'EntryRoutesIndex' are now cells of lists per mode
+- MFDsolver_accbased.m and MFDsolver_tripbased.m: new 'mode' ID for each route
+- MFDsolver_accbased.m and MFDsolver_tripbased.m: Acc and MeanSpeed fields now with a distinction on the mode (i.e. acc per mode instead of total acc, idem for mean speed)
+- MFDsolver_accbased.m and MFDsolver_tripbased.m: add loops on the number of modes at every loop on the routes
