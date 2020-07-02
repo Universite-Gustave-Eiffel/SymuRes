@@ -15,13 +15,13 @@ This simulation platform was developed during the PhD of Guilhem Mariotte. It al
 
 Authors
 -------
-- Guilhem Mariotte - guilhem.mariotte@univ-eiffel.fr | [guilhemmariotte.com](http://guilhemmariotte.com/en)
-(Simulation platform design, traffic flow solvers, pre-processing and post-processing modules)
+- Guilhem Mariotte, main author - guilhem.mariotte@univ-eiffel.fr | [guilhemmariotte.com](http://guilhemmariotte.com/en)
+(Simulation platform design, traffic flow solvers, pre-processing and post-processing modules, bugs tracking, version management)
 
-- Sergio F. A. Batista - sab21@nyu.edu
+- Sergio F. A. Batista, contributor - sab21@nyu.edu
 (DTA module, assignment and convergence loop)
 
-- Mahendra Paipuri - mahendra.paipuri@univ-eiffel.fr
+- Mahendra Paipuri, contributor - mahendra.paipuri@univ-eiffel.fr
 (Multimodality, 3D-MFD functions)
 
 Designing a simulation
