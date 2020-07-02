@@ -2,7 +2,7 @@
 %--------------------------------------------------------------------------
 % Trip-based model
 %
-% Nov 2019 - Guilhem Mariotte
+% June 2020 - Guilhem Mariotte
 
 NumRes = length(Reservoir);
 NumODmacro = length(ODmacro);
@@ -14,6 +14,7 @@ NumVeh = length(Vehicle);
 TimeStep = Simulation.TimeStep;
 SimulTime = Simulation.Time;
 NumTimes = floor(Simulation.Duration/TimeStep) + 1; % number of times
+NumModes = Simulation.NumModes;
 
 MFDfct = Simulation.MFDfct;
 
@@ -26,11 +27,7 @@ eps0 = 0.5; % criterion for waiting times [s]
 % Variable initialization
 for r = 1:NumRes
     Temp_Nroutes = max([length(Reservoir(r).RoutesID) 1]);
-    Reservoir(r).Acc = zeros(1,NumTimes); % total accumulation [veh]
     Reservoir(r).AccPerRoute = zeros(Temp_Nroutes,NumTimes); % accumulation per route crossing Rr [veh]
-    Reservoir(r).MeanSpeed = zeros(1,NumTimes); % mean speed [m/s]
-    Reservoir(r).InflowPerRoute = zeros(Temp_Nroutes,NumTimes); % inflow per route [veh/s]
-    Reservoir(r).OutflowPerRoute = zeros(Temp_Nroutes,NumTimes); % outflow per route [veh/s]
     Reservoir(r).NinPerRoute = zeros(Temp_Nroutes,NumTimes); % entry cumulative count per route [veh]
     Reservoir(r).NoutPerRoute = zeros(Temp_Nroutes,NumTimes); % exit cumulative count per route [veh]
     
@@ -175,10 +172,7 @@ end
 % Apply the simulation scaling factor
 for r = 1:NumRes
     Temp_Nroutes = length(Reservoir(r).RoutesID);
-    Reservoir(r).Acc = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).Acc;
     Reservoir(r).AccPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).AccPerRoute;
-    Reservoir(r).InflowPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).InflowPerRoute;
-    Reservoir(r).OutflowPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).OutflowPerRoute;
     Reservoir(r).NinPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).NinPerRoute;
     Reservoir(r).NoutPerRoute = 1./Simulation.TripbasedSimuFactor.*Reservoir(r).NoutPerRoute;
     
@@ -193,6 +187,13 @@ end
 
 % Variable initialization
 for r = 1:NumRes
+    Reservoir(r).Acc = zeros(1,NumTimes); % total accumulation [veh]
+    Reservoir(r).AccPerMode = zeros(NumModes,NumTimes); % accumulation per mode [veh]
+    Reservoir(r).MeanSpeed = zeros(1,NumTimes); % mean speed [m/s]
+    Reservoir(r).MeanSpeedPerMode = zeros(NumModes,NumTimes); % mean speed per mode [m/s]
+    
+    Reservoir(r).InflowPerRoute = zeros(Temp_Nroutes,NumTimes); % inflow per route [veh/s]
+    Reservoir(r).OutflowPerRoute = zeros(Temp_Nroutes,NumTimes); % outflow per route [veh/s]
     Reservoir(r).InflowPerResPerDest = zeros(NumRes,NumRes,NumTimes); % (adj res, dest res, time)
     Reservoir(r).Inflow = zeros(1,NumTimes); % total effective inflow
     Reservoir(r).OutflowPerResPerDest = zeros(NumRes,NumRes,NumTimes); % (adj res, dest res, time)
@@ -286,19 +287,30 @@ end
 %     end
 % end
 
+
 % Total accumulation and mean speed
 for r = 1:NumRes
+    % Total accumulation
     Reservoir(r).Acc = sum(Reservoir(r).AccPerRoute,1);
+    
+    % Accumulation per mode
+    i_r = 1;
+    for iroute = Reservoir(r).RoutesID
+        i_m = Route(iroute).ModeID;
+        Reservoir(r).AccPerMode(i_m,:) = Reservoir(r).AccPerMode(i_m,:) + Reservoir(r).AccPerRoute(i_r,:);
+        i_r = i_r + 1;
+    end
+    
+    % Mean speed
     Temp_param = Reservoir(r).MFDfctParam;
     for i = 1:NumTimes
-        Temp_nr = Reservoir(r).Acc(i);
+        Temp_nr = Reservoir(r).AccPerMode(:,i);
         %Temp_nr = Temp_ncircu(r,i);
-        if Temp_nr == 0
-            Temp_Vr = Reservoir(r).FreeflowSpeed;
-        else
-            Temp_Vr = MFDfct(Temp_nr,Temp_param)/Temp_nr;
+        Temp_Vr = MFDfct(Temp_nr,Temp_param)./Temp_nr;
+        if any(Temp_nr == 0)
+            Temp_Vr(Temp_nr == 0) = Reservoir(r).FreeflowSpeed(Temp_nr == 0);
         end
-        Reservoir(r).MeanSpeed(i) = Temp_Vr;
+        Reservoir(r).MeanSpeedPerMode(:,i) = Temp_Vr(1:NumModes);
     end
 end
 

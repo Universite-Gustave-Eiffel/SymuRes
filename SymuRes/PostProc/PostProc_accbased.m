@@ -2,7 +2,7 @@
 %--------------------------------------------------------------------------
 % Accumulation-based model
 %
-% Nov 2019 - Guilhem Mariotte
+% June 2020 - Guilhem Mariotte
 
 NumRes = length(Reservoir);
 NumODmacro = length(ODmacro);
@@ -13,6 +13,7 @@ NumMacroNodes = length(MacroNode);
 TimeStep = Simulation.TimeStep;
 SimulTime = Simulation.Time;
 NumTimes = floor(Simulation.Duration/TimeStep) + 1; % number of times
+NumModes = Simulation.NumModes;
 
 MFDfct = Simulation.MFDfct;
 
@@ -37,7 +38,11 @@ end
 % Variable initialization
 for r = 1:NumRes
     Temp_Nroutes = max([length(Reservoir(r).RoutesID) 1]);
+    
     Reservoir(r).Acc = zeros(1,NumTimes); % total accumulation [veh]
+    Reservoir(r).AccPerMode = zeros(NumModes,NumTimes); % accumulation per mode [veh]
+    Reservoir(r).MeanSpeed = zeros(1,NumTimes); % mean speed [m/s]
+    Reservoir(r).MeanSpeedPerMode = zeros(NumModes,NumTimes); % mean speed per mode [m/s]
     Reservoir(r).AvgTripLength = zeros(1,NumTimes); % average trip length [m]
     Reservoir(r).InflowPerResPerDest = zeros(NumRes,NumRes,NumTimes); % (adj res, dest res, time)
     Reservoir(r).Inflow = zeros(1,NumTimes); % total effective inflow [veh/s]
@@ -56,7 +61,21 @@ end
 
 % Total accumulation, inflow and outflow
 for r = 1:NumRes
+    % Total accumulation
     Reservoir(r).Acc = sum(Reservoir(r).AccPerRoute,1);
+    
+    % Accumulation per mode
+    i_r = 1;
+    for iroute = Reservoir(r).RoutesID
+        i_m = Route(iroute).ModeID;
+        Reservoir(r).AccPerMode(i_m,:) = Reservoir(r).AccPerMode(i_m,:) + Reservoir(r).AccPerRoute(i_r,:);
+        i_r = i_r + 1;
+    end
+    
+    % Mean speed
+    Reservoir(r).MeanSpeedPerMode = Reservoir(r).MeanSpeed; % mean speed per mode [m/s]
+    
+    % Inflow/outflow
     Reservoir(r).Inflow = sum(Reservoir(r).InflowPerRoute,1);
     Reservoir(r).Outflow = sum(Reservoir(r).OutflowPerRoute,1);
 end
