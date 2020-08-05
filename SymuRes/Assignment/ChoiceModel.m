@@ -31,9 +31,15 @@ Temp_RouteIDs = RoutesList;
 % end
 
 % Assignment period time window
-NumTimes = length(Simulation.Time);
-Temp_StartTimeID = floor(Assignment.CurrentTime/Simulation.TimeStep) + 1;
-Temp_EndTimeID = min([floor(Assignment.Periods(Assignment.CurrentPeriodID+1)/Simulation.TimeStep) NumTimes-1]);
+if ~isempty(Simulation)
+    NumTimes = length(Simulation.Time);
+    Temp_StartTimeID = floor(Assignment.CurrentTime/Simulation.TimeStep) + 1;
+    Temp_EndTimeID = min([floor(Assignment.Periods(Assignment.CurrentPeriodID+1)/Simulation.TimeStep) NumTimes-1]);
+else
+    % Default values if no simulation time information given
+    Temp_StartTimeID = 1;
+    Temp_EndTimeID = 1;
+end
 % Previous assignment period time window
 if Temp_StartTimeID == 1
     Temp_StartTimeID_Previous = Temp_StartTimeID;
