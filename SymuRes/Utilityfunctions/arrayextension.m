@@ -1,12 +1,12 @@
-function extarray = arrayextension(array,Nmin,type)
-% extarray = listextension(array,Nmin,type)
+function extarray = arrayextension(array,Next,type)
+% extarray = listextension(array,Next,type)
 % Extend a 2d matrix, cell or array along one of its dimensions (columns or
-% rows) by repeating its content until the corresponding dimension has at
-% least a minimum size
+% rows) by repeating its content until the corresponding dimension has the
+% required size Next
 %
 % INPUTS
 %---- array : 1d or 2d matrix, cell or array
-%---- Nmin  : integer, minimum size for the chosen dimension
+%---- Next  : integer, desired size for the chosen dimension
 %---- type  : string, 'column' or 'row', chosen dimension to extend
 %
 % OUTPUTS
@@ -14,14 +14,16 @@ function extarray = arrayextension(array,Nmin,type)
 
 if strcmp(type,'column')
     extarray = array;
-    while size(extarray,2) < Nmin
+    while size(extarray,2) < Next
         extarray = [extarray array];
     end
+    extarray = extarray(:,1:Next);
 elseif strcmp(type,'row')
     extarray = array;
-    while size(extarray,1) < Nmin
+    while size(extarray,1) < Next
         extarray = [extarray; array];
     end
+    extarray = extarray(1:Next,:);
 else
     warning('Bad extension type, must be one of the following: column, row')
     extarray = [];
