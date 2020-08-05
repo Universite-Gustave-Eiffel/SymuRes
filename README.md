@@ -46,6 +46,7 @@ V1.1 - June 2O2O
 Bug fixes in the trip-based solver, add FIFO merge model in the acc-based solver
 
 - AssignCalc.m: put the calculation of route demand here instead of the acc-based solver, when the routes are not predefined
+- ChoiceModel.m: handle the exception of an empty Simulation structure as input
 - MFDsolver folder: add the mergeFIFO merge function
 - MFDsolver folder: rename and typo fixes for the merge functions
 - mergetimeFair: return effective times instead of supply times
