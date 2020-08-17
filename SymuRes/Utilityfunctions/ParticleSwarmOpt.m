@@ -1,7 +1,9 @@
 function pfit = ParticleSwarmOpt(x,y,fct,pinit,pdim,cvgcrit,maxiter,Npart)
 % pfit = ParticleSwarmOpt(x,y,fct,pinit,pdim,cvgcrit,maxiter,Npart)
 % Fit the data (x,y) with a function f(x,p) with a set of parameters p
-% Use the Swarm Particle algorithm
+% Use the Particle Swarm algorithm
+%
+% Sept 2016 - Sergio F. A. Batista
 %
 % INPUTS
 %---- x,y     : vectors of same length, data point set
@@ -28,9 +30,16 @@ chi = 0.729; % required constant in the velocity update calculation (empirical v
 firsttime = 1; % boolean to indicate the first loop
 bestparticleID = 1; % particle index with the best parameter position (best fit)
 
-% Initialize the particle positions and velocities (random choice in the parameter space)
+% Initialize the particle positions and velocities
 for j = 1:Nparam
-    for i = 1:Npart
+    % Initial parameters for the first half of particles
+    for i = 1:floor(Npart/2)
+        %position(i,j) = pdim(j,1) + rand*(pdim(j,2) - pdim(j,1));
+        position(i,j) = pinit(j);
+        velocity(i,j) = 0.5*position(i,j);
+    end
+    % Random choice in the parameter space for the second half of particles
+    for i = (floor(Npart/2)+1):Npart
         position(i,j) = pdim(j,1) + rand*(pdim(j,2) - pdim(j,1));
         %position(i,j) = pinit(j)*(0.5 + 1*rand);
         velocity(i,j) = 0.5*position(i,j);
