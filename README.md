@@ -41,7 +41,7 @@ V1.0 - Feb 2020
 ---------------
 Original commit
 
-V1.1 - June 2O2O
+V1.1 - June 2020
 ----------------
 Bug fixes in the trip-based solver, add FIFO merge model in the acc-based solver
 
