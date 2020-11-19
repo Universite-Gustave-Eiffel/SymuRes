@@ -1,4 +1,4 @@
-%% SYMURES 1.1 - A Multi-Reservoir MFD-Based Traffic Simulator
+%% SYMURES 2.0 - A Multimodal Multi-Reservoir MFD-Based Traffic Simulator
 %--------------------------------------------------------------------------
 %
 % Authors
@@ -12,7 +12,7 @@
 %
 % Version
 % -------
-% 1.1, April 2020
+% 2.0, November 2020
 
 clear all
 clc
@@ -25,14 +25,14 @@ addpath('MFDsolver/','Assignment/','UserNetworks/','PostProc/','Route/','Converg
 %--------------------------------------------------------------------------
 
 % Choice of a network defined by user
-Simulation.Network = 'Grid_9res';
+Simulation.Network = 'Braess_2modes';
 
 % Choice of the solver
 % 1: accbased / 2: tripbased
 Simulation.Solver = 1;
 
 % Simulation name
-Simulation.Name = 'SC21';
+Simulation.Name = 'SC13';
 
 
 %% Launch simulation
@@ -47,7 +47,7 @@ try
     tic;
     disp ' '
     disp '********************************************'
-    disp 'SymuRes V1.1 - network and demand definition'
+    disp 'SymuRes V2.0 - network and demand definition'
     
     addpath(['UserNetworks/' Simulation.Network '/'])
     SimulSettings
@@ -107,6 +107,8 @@ try
     toc;
     
     clear Temp_*
+    
+    samplePlots
     
     % Save simulation outputs
     %------------------------

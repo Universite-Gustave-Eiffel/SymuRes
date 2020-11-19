@@ -13,7 +13,7 @@
 % Mariotte et al. (TR part B, 2017)
 % Mariotte & Leclercq (TR part B, 2019)
 % Mariotte et al. (TR part B, 2020)
-% Paipuri & Leclercq (...)
+% Paipuri & Leclercq (TR part B, 2020)
 
 
 %% Vehicle creation
@@ -110,7 +110,7 @@ for iroute = 1:NumRoutes
         
         % Sort by ascending entry times
         [Temp_times, Temp_sortindex] = sort(Route(iroute).EntryTimes(Temp_istart:Temp_iend));
-        Route(iroute).EntryTimes(Temp_istart:Temp_iend) = Temp_times;
+        Route(iroute).EntryTimes(Temp_istart:Temp_iend) = Temp_times + (iroute-1);
         Route(iroute).NumEntryTimes = length(Route(iroute).EntryTimes);
         
         Temp_purposes = cell(1,Temp_Ntimes);
@@ -424,6 +424,10 @@ while CurrentTime < Temp_EndTime
     Global.SimulTime(itime) = CurrentTime;
     Global.VehID(itime) = NextEvent.VehID;
     
+    if CurrentTime > 700
+        dd = 1;
+    end
+    
     % Current vehicle, route and reservoir
     iveh = NextEvent.VehID;
     ires = Vehicle(iveh).CurrentResID;
@@ -557,28 +561,51 @@ while CurrentTime < Temp_EndTime
             i_p = Vehicle(iveh).PathIndex;
             Temp_dist = Vehicle(iveh).TripLength(i_p) - Vehicle(iveh).TraveledDistance(i_p); % remaining distance
             Temp_vehlist = [Temp_vehlist iveh]; % veh in last position by default
-            Temp_vehlist2 = Temp_vehlist;
-            i = length(Temp_vehlist2);
-            if i > 1
-                i_p = Vehicle(Temp_vehlist2(i-1)).PathIndex;
-                Temp_dist2 = Vehicle(Temp_vehlist2(i-1)).TripLength(i_p) - Vehicle(Temp_vehlist2(i-1)).TraveledDistance(i_p); % remaining distance
-                while i > 1 && Temp_dist < Temp_dist2
-                    Temp_vehlist(i) = Temp_vehlist(i-1);
-                    Temp_vehlist(i-1) = iveh;
-                    i = i - 1;
-                    if i > 1
-                        i_p = Vehicle(Temp_vehlist2(i-1)).PathIndex;
-                        Temp_dist2 = Vehicle(Temp_vehlist2(i-1)).TripLength(i_p) - Vehicle(Temp_vehlist2(i-1)).TraveledDistance(i_p); % remaining distance
-                    end
-                end
+            %!%!%!%!%!%!%! To Guilhem -> I think you are not rearranging the queue
+            % correctly here. As buses and cars travel with different speeds in 3D MFD
+            % context, there will be "pseudo" overtakes in the reservoir. Based on the
+            % remaining distance, we need to rearrange the queue at every event
+            % iteration.
+            %!%!%!%!%!%!%!
+            %             Temp_vehlist2 = Temp_vehlist;
+            %             i = length(Temp_vehlist2);
+            %             if i > 1
+            %                 i_p = Vehicle(Temp_vehlist2(i-1)).PathIndex;
+            %                 Temp_dist2 = Vehicle(Temp_vehlist2(i-1)).TripLength(i_p) - Vehicle(Temp_vehlist2(i-1)).TraveledDistance(i_p); % remaining distance
+            %                 while i > 1 && Temp_dist < Temp_dist2
+            %                     Temp_vehlist(i) = Temp_vehlist(i-1);
+            %                     Temp_vehlist(i-1) = iveh;
+            %                     i = i - 1;
+            %                     if i > 1
+            %                         i_p = Vehicle(Temp_vehlist2(i-1)).PathIndex;
+            %                         Temp_dist2 = Vehicle(Temp_vehlist2(i-1)).TripLength(i_p) - Vehicle(Temp_vehlist2(i-1)).TraveledDistance(i_p); % remaining distance
+            %                     end
+            %                 end
+            %             end
+            %             Reservoir(ires).VehList = Temp_vehlist;
+            i_v = 1;Temp_rem_dist = zeros(1,length(Temp_vehlist));
+            for i = Temp_vehlist
+                i_p = Vehicle(i).PathIndex;
+                Temp_rem_dist(i_v) = Vehicle(i).TripLength(i_p) - Vehicle(i).TraveledDistance(i_p);
+                i_v = i_v+1;
             end
-            Reservoir(ires).VehList = Temp_vehlist;
+            [~, I] = sort(Temp_rem_dist);
+            Reservoir(ires).VehList = Temp_vehlist(I);
         end
         
         % Set the first vehicle to exit for each route in r
-        if Reservoir(ires).FirstVehPerRoute(i_r) == 0
-            Reservoir(ires).FirstVehPerRoute(i_r) = iveh;
+        i = 1;
+        while i <= length(Reservoir(ires).VehList) && Vehicle(Reservoir(ires).VehList(i)).RouteID ~= iroute
+            i = i + 1;
         end
+        if i <= length(Reservoir(ires).VehList)
+            Reservoir(ires).FirstVehPerRoute(i_r) = Reservoir(ires).VehList(i);
+        else
+            Reservoir(ires).FirstVehPerRoute(i_r) = 0; % no next veh found on this route
+        end
+        %         if Reservoir(ires).FirstVehPerRoute(i_r) == 0
+        %             Reservoir(ires).FirstVehPerRoute(i_r) = iveh;
+        %         end
         
     else % The vehicle has arrived at destination
         
@@ -653,6 +680,40 @@ while CurrentTime < Temp_EndTime
                 end
             end
         end
+        
+        if ~isempty(Reservoir(r).VehList)
+            iveh = Reservoir(r).VehList(1); % first vehicle in the waiting list
+            i_p = Vehicle(iveh).PathIndex;
+            iroute = Vehicle(iveh).RouteID;
+            i_r = find(Reservoir(r).RoutesID == iroute);
+            i_m = Vehicle(iveh).ModeID;
+            if CritLine <= 0 && strcmp(Simulation.DivergeModel,'maxdem') && ismember(i_r,Reservoir(r).ExitRoutesIndex{i_m})
+                % Force the veh to exit in case of congested state
+                Vehicle(iveh).TraveledDistance(i_p) = Vehicle(iveh).TripLength(i_p);
+            end
+            if Reservoir(r).CurrentMeanSpeed(i_m) > 0
+                Temp_time = CurrentTime + (Vehicle(iveh).TripLength(i_p) - Vehicle(iveh).TraveledDistance(i_p))/Reservoir(r).CurrentMeanSpeed(i_m);
+            else
+                %Temp_time = Inf;
+                Temp_time = CurrentTime;
+            end
+            Temp_Lrp = Reservoir(r).TripLengthPerRoute;
+            Temp_nrp = Reservoir(r).CurrentAccPerRoute;
+            if sum(Temp_nr) == 0
+                Temp_Lr = mean(Temp_Lrp);
+            else
+                Temp_Lr = sum(Temp_nr)/sum(Temp_nrp./Temp_Lrp);
+            end
+            Temp_nr = Reservoir(r).CurrentAcc;
+            Temp_time2 = Reservoir(r).LastExitTime + Temp_Lr/sum(Temp_Pc);
+            %Temp_time2 = 0;
+            Temp_time = max([Temp_time CurrentTime]);
+            Reservoir(r).DesiredExitTime = Temp_time;
+            Reservoir(r).DesiredExitVeh = iveh;
+        else
+            Reservoir(r).DesiredExitTime = Inf;
+            Reservoir(r).DesiredExitVeh = 0;
+        end    
     end
     
     
@@ -684,6 +745,7 @@ while CurrentTime < Temp_EndTime
             Reservoir(ires).DesiredEntryVeh = 1;
         end
     end
+    
     % Update the desired entry time with the desired exit time from previous res (route transfer)
     Temp_reslist = [];
     for r = NextEvent.ResList % loop only on reservoirs where accumulation changed
@@ -758,7 +820,7 @@ while CurrentTime < Temp_EndTime
                     Reservoir(r).MergeCoeffPerRoute(Temp_indexes) = (Temp_nrp > 0).*Temp_nrp./Temp_nr_entry + (Temp_nrp <= 0).*1;
                 end
             end
-        elseif strcmp(Simulation.MergeModel,'demprorata') || strcmp(Simulation.MergeModel,'demfifo')
+        elseif strcmp(Simulation.MergeModel,'demprorata') % || strcmp(Simulation.MergeModel,'demfifo')
             % Demand pro-rata flow merge
             for i_m = 1:NumModes
                 Temp_indexes = Reservoir(r).EntryRoutesIndex{i_m};
@@ -818,6 +880,26 @@ while CurrentTime < Temp_EndTime
                 Temp_supplytimes = mergetimeFair(Temp_Lrp,Temp_demtimes,Temp_lasttimes,1,Temp_prodsupply,Temp_mergecoeff);
                 Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
             end
+        elseif strcmp(Simulation.MergeModel,'demfifo')
+            % FIFO entry (for entering productions)
+            Temp_nr = Reservoir(r).CurrentAcc;
+            Temp_scf = Simulation.TripbasedSimuFactor;
+            Temp_param = Reservoir(r).MFDfctParam;
+            Temp_prodsupply = sum(Entryfct(Temp_nr,Temp_scf*Temp_param)) - sum(Reservoir(r).InternalProd); % SCF already included in InternalProd
+            Temp_Nroutes = length(Reservoir(r).RoutesID);
+            Temp_proddem = zeros(1,Temp_Nroutes);Temp_Lrp = zeros(1,Temp_Nroutes);
+            for i_m = 1:NumModes
+                Temp_indexes = Reservoir(r).EntryRoutesIndex{i_m};
+                Temp_Lrp(Temp_indexes) = Reservoir(r).TripLengthPerRoute(Temp_indexes);
+                Temp_proddem(Temp_indexes) = Temp_qinr2(Temp_indexes);
+            end
+            if Temp_proddem > 0
+                Temp_Lr_entry = sum(Temp_proddem)/sum(Temp_proddem./Temp_Lrp);
+            else
+                Temp_Lr_entry = mean(Temp_Lrp);
+            end
+            Temp_flowsupply = Temp_prodsupply/Temp_Lr_entry;
+            Reservoir(r).EntrySupplyTime = Reservoir(r).LastEntryTime + 1/Temp_flowsupply;
         else
             % Other merge models (for inflows)
             Temp_nr = Reservoir(r).CurrentAcc;
@@ -1006,7 +1088,7 @@ while CurrentTime < Temp_EndTime
                     Temp_Lr = Temp_nr/sum(Temp_nrp./Temp_Lrp);
                 end
                 Temp_time2 = Reservoir(r).LastExitTime + Temp_Lr/(Temp_scf*Temp_Pc);
-                Temp_demandtime = Reservoir(r).DesiredExitTimePerRoute(i_r);
+                Temp_demandtime = Reservoir(r).DesiredExitTime; %Reservoir(r).DesiredExitTimePerRoute(i_r);
                 Temp_supplytime = Reservoir(r).ExitSupplyTimePerRoute(i_r);
                 Temp_time = max([Temp_demandtime Temp_supplytime Temp_time2 CurrentTime]);
             else
@@ -1081,28 +1163,28 @@ while CurrentTime < Temp_EndTime
         
     end
     
-%     r = 2;
-%     if 2500 <= CurrentTime && CurrentTime < 4500
-%         fprintf('%s%3.1f \t %s%3.1f \t %s%i \t %s%i \t %s%i \n','time=',CurrentTime,'nexteventtime=',NextEvent.Time,'r=',Vehicle(NextEvent.VehID).CurrentResID,'iveh=',NextEvent.VehID,'route=',Vehicle(NextEvent.VehID).RouteID)
-%         fprintf('%s \n','Last entry time per route:')
-%         for i_r = 1:length(Reservoir(r).RoutesID)
-%             fprintf('%3.1f \t',Reservoir(r).LastEntryTimePerRoute(i_r))
-%         end
-%         fprintf('\n%s \n','Entry supply time per route:')
-%         for i_r = 1:length(Reservoir(r).RoutesID)
-%             fprintf('%3.1f \t',Reservoir(r).EntrySupplyTimePerRoute(i_r))
-%         end
-%         fprintf('\n%s \n','Desired exit time per route:')
-%         for i_r = 1:length(Reservoir(r).RoutesID)
-%             fprintf('%3.1f \t',Reservoir(r).DesiredExitTimePerRoute(i_r))
-%         end
-%         fprintf('\n%s \n','Exit supply time per route:')
-%         for i_r = 1:length(Reservoir(r).RoutesID)
-%             fprintf('%3.1f \t',Reservoir(r).ExitSupplyTimePerRoute(i_r))
-%         end
-%         fprintf('\n%s%3.1f \t %s%3.1f \n','nextentry=',Reservoir(r).NextEntryTime,'nextexit=',Reservoir(r).NextExitTime)
-%         fprintf('%s\n',' ')
-%     end
+    %     r = 2;
+    %     if 2500 <= CurrentTime && CurrentTime < 4500
+    %         fprintf('%s%3.1f \t %s%3.1f \t %s%i \t %s%i \t %s%i \n','time=',CurrentTime,'nexteventtime=',NextEvent.Time,'r=',Vehicle(NextEvent.VehID).CurrentResID,'iveh=',NextEvent.VehID,'route=',Vehicle(NextEvent.VehID).RouteID)
+    %         fprintf('%s \n','Last entry time per route:')
+    %         for i_r = 1:length(Reservoir(r).RoutesID)
+    %             fprintf('%3.1f \t',Reservoir(r).LastEntryTimePerRoute(i_r))
+    %         end
+    %         fprintf('\n%s \n','Entry supply time per route:')
+    %         for i_r = 1:length(Reservoir(r).RoutesID)
+    %             fprintf('%3.1f \t',Reservoir(r).EntrySupplyTimePerRoute(i_r))
+    %         end
+    %         fprintf('\n%s \n','Desired exit time per route:')
+    %         for i_r = 1:length(Reservoir(r).RoutesID)
+    %             fprintf('%3.1f \t',Reservoir(r).DesiredExitTimePerRoute(i_r))
+    %         end
+    %         fprintf('\n%s \n','Exit supply time per route:')
+    %         for i_r = 1:length(Reservoir(r).RoutesID)
+    %             fprintf('%3.1f \t',Reservoir(r).ExitSupplyTimePerRoute(i_r))
+    %         end
+    %         fprintf('\n%s%3.1f \t %s%3.1f \n','nextentry=',Reservoir(r).NextEntryTime,'nextexit=',Reservoir(r).NextExitTime)
+    %         fprintf('%s\n',' ')
+    %     end
     
     %keyboard
     
@@ -1173,7 +1255,6 @@ for i_m = 1:NumModes
         end
     end
 end
-
 
 
 
