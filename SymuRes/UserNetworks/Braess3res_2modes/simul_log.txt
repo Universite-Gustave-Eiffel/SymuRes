@@ -1,0 +1,21 @@
+ 
+********************************************
+SymuRes V2.0 - network and demand definition
+Elapsed time is 0.225400 seconds.
+Start simulation loop
+ 
+Assignment period 1 - Simulation time: 0
+----------------------------------------------------------
+ 
+MSA loop 1
+Travel time per route: 
+200.0 	200.0 	206.7 	213.3 	
+Assignment coefficient per route: 
+0.464 	0.271 	0.265 	1.000 	 
+Gap = 0.00899
+ 
+*****************
+End of simulation
+Elapsed time is 1.105448 seconds.
+Simulation successfully saved as:
+UserNetworks/Braess2res_2modes/outputs/Outputs_SC13_accbased.mat
