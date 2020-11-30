@@ -39,16 +39,16 @@ bbb = param(6)/param(8)^2;
 % dP/dn_c = vfc + 2 * bcc * n_c + (bbc + bcb) * n_b
 % To maximum P, dP/dn_c = 0 => vfc + 2 * bcc * n_c + (bbc + bcb) * n_b = 0
 % For maximum P for a given n_c, n_b should be (vfc - ((bbc + bcb)) * n_b) / (2 * bcc)
-ind_1 = find(2*bcc*n(1,:) + (bbc + bcb)*n(2,:) + vfc <= 0); % Congestion side
-ind_2 = find(2*bcc*n(1,:) + (bbc + bcb)*n(2,:) + vfc > 0); % Free flow side
+cong_ind = find(2*bcc*n(1,:) + (bbc + bcb)*n(2,:) + vfc <= 0); % Congestion side
+ff_ind = find(2*bcc*n(1,:) + (bbc + bcb)*n(2,:) + vfc > 0); % Free flow side
 
-if ( ~isempty(ind_1) )
-    Pt = parabo3dFD(n(:,ind_1),param);
-    P(:,ind_1) = Pt(:);
+if ( ~isempty(cong_ind) )
+    Pt = parabo3dFD(n(:,cong_ind),param);
+    P(:,cong_ind) = Pt;
 end
-if ( ~isempty(ind_2) )
-    Pt = parabo3dFD([max( -(vfc + (bbc + bcb)*n(2,ind_2))/(2*bcc), 0 ); n(2,ind_2)],param);
-    P(:,ind_2) =  Pt(:);
+if ( ~isempty(ff_ind) )
+    Pt = parabo3dFD([max( -(vfc + (bbc + bcb)*n(2,ff_ind))/(2*bcc), 0 ); n(2,ff_ind)],param);
+    P(:,ff_ind) =  Pt;
 end
 
 % Bus 3D MFD

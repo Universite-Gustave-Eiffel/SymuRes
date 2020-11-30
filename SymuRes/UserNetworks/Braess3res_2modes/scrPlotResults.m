@@ -28,9 +28,9 @@ fontname = 'Times New Roman';
 % Result from simulation 1
 %--------------------------------------------------------------------------
 iresu = 1;
-Results(iresu).Network = 'Braess_2modes'; % Choice of a network defined by user
+Results(iresu).Network = 'Braess3res_2modes'; % Choice of a network defined by user
 Results(iresu).Solver = 1; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC12'; % Simulation name
+Results(iresu).Name = 'SC11'; % Simulation name
 Results(iresu).Name2 = 'acc-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -50,9 +50,9 @@ Results(iresu).ODmacro = ODmacro;
 % Result from simulation 2
 %--------------------------------------------------------------------------
 iresu = 2;
-Results(iresu).Network = 'Braess_2modes'; % Choice of a network defined by user
+Results(iresu).Network = 'Braess3res_2modes'; % Choice of a network defined by user
 Results(iresu).Solver = 2; % Choice of the solver. 1: accbased / 2: tripbased
-Results(iresu).Name = 'SC13'; % Simulation name
+Results(iresu).Name = 'SC11'; % Simulation name
 Results(iresu).Name2 = 'trip-based'; % Name to print on the graph legends
 
 if Results(iresu).Solver == 1
@@ -239,9 +239,9 @@ PrintFig = 0; % 1: print the figure (save as pdf in the img folder) / 0: do not 
 filename = Results(iresu).Name; % name for printing
 
 % Plot options
-ResList = [1 2 3 4]; % list of reservoirs
-RoutesList = [1 2 3]; % list of routes, put to [] for not plotting route states
-ResuList = [1]; % list of results
+ResList = [1 2]; % list of reservoirs
+RoutesList = [1 2]; % list of routes, put to [] for not plotting route states
+ResuList = [1 2]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
 AccRange = [0 1000]; % [veh]
 FlowRange = [0 3]; % [veh/s]
@@ -568,8 +568,8 @@ end
 FS = 16; % font size
 
 % Plot options
-ResList = [1 2 3 4]; % list of reservoirs
-ResuList = [1]; % list of results
+ResList = [1 2]; % list of reservoirs
+ResuList = [1 2]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
 AccRange = [0 400]; % [veh]
 FlowRange = [0 3]; % [veh/s]

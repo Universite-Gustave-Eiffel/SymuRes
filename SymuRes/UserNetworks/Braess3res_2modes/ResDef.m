@@ -13,7 +13,7 @@
 % Reservoir.CritAcc ; reservoir critical accumulation [veh]
 
 % Number of reservoirs
-NumRes = 3;
+NumRes = 2;
 
 Reservoir = struct('Centroid',cell(1,NumRes));
 
@@ -33,7 +33,7 @@ Exitfct = @parabo3dExitFD;
 i = 1;
 Reservoir(i).Centroid = [0 1]; % virtual positioning [x y] for plotting purpose
 Reservoir(i).BorderPoints = [-1 1 1 -1 -1; 0 0 2 2 0];
-Reservoir(i).AdjacentRes = [2 3]; % adjacent reservoirs
+Reservoir(i).AdjacentRes = [2]; % adjacent reservoirs
 Reservoir(i).FreeflowSpeed = [15 15]; % [m/s]
 Reservoir(i).MaxProd = 5000; % 3750; % [veh.m/s]
 Reservoir(i).CritAcc(1) = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed(1); % for a parabolic MFD
@@ -56,31 +56,9 @@ Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
 i = 2;
 Reservoir(i).Centroid = [2 2]; % virtual positioning [x y]
 Reservoir(i).BorderPoints = [1 3 3 1 1; 1 1 3 3 1];
-Reservoir(i).AdjacentRes = [1 3 4]; % adjacent reservoirs
+Reservoir(i).AdjacentRes = [1]; % adjacent reservoirs
 Reservoir(i).FreeflowSpeed = [15 15]; % [m/s]
-Reservoir(i).MaxProd = 4500; % 2250; % [veh.m/s]
-Reservoir(i).CritAcc(1) = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed(1); % for a parabolic MFD
-Reservoir(i).MaxAcc = 2*Reservoir(i).CritAcc(1); % for a parabolic MFD
-% 3DMFD parameters
-uc       = Reservoir(i).FreeflowSpeed(1); % Free flow speed of cars
-ub       = Reservoir(i).FreeflowSpeed(2); % Free flow speed of buses
-bcc      = -Reservoir(i).MaxProd/Reservoir(i).CritAcc^2; % Marginal Effect of cars on car speed
-bbc      = -0.3;     % Marginal Effect of buses on car speed
-bcb      = 0.2*bcc;  % Marginal Effect of cars on bus speed
-bbb      = 0.2*bbc;  % Marginal Effect of buses on bus speed
-Reservoir(i).MFDfctParam = [uc ub bcc bbc bcb bbb 1 1];
-Reservoir(i).CritAcc(2) = -uc/(bbc + bcb);
-Reservoir(i).EntryfctParam = Reservoir(i).MFDfctParam;
-Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
-
-% R3
-%--------------------------------------------------------------------------
-i = 3;
-Reservoir(i).Centroid = [4 1]; % virtual positioning [x y]
-Reservoir(i).BorderPoints = [3 5 5 3 3; 0 0 2 2 0];
-Reservoir(i).AdjacentRes = [2 3]; % adjacent reservoirs
-Reservoir(i).FreeflowSpeed = [15 15]; % [m/s]
-Reservoir(i).MaxProd = 3000; % 3750; % [veh.m/s]
+Reservoir(i).MaxProd = 3000; % 2250; % [veh.m/s]
 Reservoir(i).CritAcc(1) = 2*Reservoir(i).MaxProd/Reservoir(i).FreeflowSpeed(1); % for a parabolic MFD
 Reservoir(i).MaxAcc = 2*Reservoir(i).CritAcc(1); % for a parabolic MFD
 % 3DMFD parameters
@@ -124,15 +102,15 @@ MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 3;
 MacroNode(i).Type = 'externalexit';
-MacroNode(i).ResID = 3;
-MacroNode(i).Coord = Reservoir(3).Centroid + [0 0.2];
+MacroNode(i).ResID = 2;
+MacroNode(i).Coord = Reservoir(2).Centroid + [0 0.2];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 4;
 MacroNode(i).Type = 'destination';
-MacroNode(i).ResID = 3;
-MacroNode(i).Coord = Reservoir(3).Centroid + [0 -0.2];
+MacroNode(i).ResID = 2;
+MacroNode(i).Coord = Reservoir(2).Centroid + [0 -0.2];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
@@ -145,15 +123,8 @@ MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 6;
 MacroNode(i).Type = 'border';
-MacroNode(i).ResID = [2 3];
-MacroNode(i).Coord = mean([Reservoir(2).Centroid; Reservoir(3).Centroid]);
-MacroNode(i).Capacity.Time = 0; % [s]
-MacroNode(i).Capacity.Data = 100; % [veh/s]
-
-i = 7;
-MacroNode(i).Type = 'border';
-MacroNode(i).ResID = [2 3];
-MacroNode(i).Coord = mean([Reservoir(2).Centroid - 0.1; Reservoir(3).Centroid - 0.1]);
+MacroNode(i).ResID = [1 2];
+MacroNode(i).Coord = mean([Reservoir(1).Centroid - 0.1; Reservoir(2).Centroid - 0.1]);
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
@@ -226,29 +197,29 @@ for o = 1:NumOrigins % loop on all possible origins
         if Temp_orinodes(o) == 1 && Temp_destnodes(d) == 3
             ODmacro(od).NumPossibleRoutes = 5;
             iroute = 1;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 6 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000];
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
             iroute = 2;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 7 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000];
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 6 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
             iroute = 3;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 6 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1100 1000];
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1100];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
             iroute = 4;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 7 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1200 1000];
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 6 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1200];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
             iroute = 5;
-            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3];
-            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 6 3];
-            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1200];
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [1 5 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
         end
       

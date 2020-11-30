@@ -92,10 +92,6 @@ eps2 = 10;
 
 for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
     
-    if SimulTime(itime) > 2530
-        dd = 1;
-    end
-    
     % Mean speed and outflow demand calculation
     %------------------------------------------
     for r = 1:NumRes % loop on all reservoirs
@@ -151,6 +147,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
                         Temp_Orp = Temp_nrp/Temp_Lrp*Temp_Vr(i_m);
                     else
                         Temp_Orp = Temp_nrp/Temp_nr(i_m)*Temp_proddemand(i_m)/Temp_Lrp; % maximum outflow
+                        % Temp_Orp = Temp_nrp/Temp_nr(i_m)*sum(Temp_proddemand)/Temp_Lrp; % maximum outflow
                     end
                 elseif strcmp(Simulation.DivergeModel,'queuedyn')
                     % Boundary queue dynamics
@@ -193,7 +190,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         i_r = 1;
         for iroute = Reservoir(r).RoutesID % loop on all routes in Rr
             if r == Route(iroute).ResOriginID % Rr origin of the route
-                i_m = Reservoir(r).RouteMode(iroute);
+                i_m = Reservoir(r).RouteMode(i_r);
                 if ismember(i_r,Reservoir(r).EntryRoutesIndex{i_m}) % external origin
                     if Reservoir(r).NumWaitingVeh(i_r) < eps0
                         Reservoir(r).InflowDemandPerRoute(i_r) = Route(iroute).Demand(itime);
@@ -320,29 +317,26 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         if strcmp(Simulation.MergeModel,'endogenous')
             % Endogenous merge (for entering productions)
             Temp_param = Reservoir(r).EntryfctParam;
-            Temp_prodsupply = Temp_QF*(Entryfct(Temp_nr,Temp_param)' - Reservoir(r).InternalProd);
+            Temp_totprodsupply = Temp_QF*(sum(Entryfct(Temp_nr,Temp_param)' - Reservoir(r).InternalProd));
+            Temp_totflowdem = Reservoir(r).InflowDemandPerRoute;
             for i_m = 1:NumModes
                 Temp_indexes = Reservoir(r).EntryRoutesIndex{i_m};
                 Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
                 Temp_proddem = Temp_Ltrip.*Reservoir(r).InflowDemandPerRoute(Temp_indexes);
+                Temp_flowdem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
                 Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
+                Temp_prodsupply = (sum(Temp_flowdem)/sum(Temp_totflowdem))*Temp_totprodsupply;
                 
-                Temp_prod = mergeFair(Temp_proddem,Temp_prodsupply(i_m),Temp_mergecoeff);
+                Temp_prod = mergeFair(Temp_proddem,Temp_prodsupply,Temp_mergecoeff);
                 Reservoir(r).InflowSupplyPerRoute(Temp_indexes) = Temp_prod./Temp_Ltrip;
             end
         elseif strcmp(Simulation.MergeModel,'demfifo')
             % FIFO discipline merge applied per external node
             Temp_param = Reservoir(r).EntryfctParam;
             Temp_prodsupply = Temp_QF*(sum(Entryfct(Temp_nr,Temp_param)) - sum(Reservoir(r).InternalProd));
-            if SimulTime(itime) > 690
-                dd = 1;
-            end
             for i_e = 1:length(Reservoir(r).EntryRoutesIndexPerNode)
                 Temp_indexes = Reservoir(r).EntryRoutesIndexPerNode{i_e};
                 Temp_entryprodsupply = sum(Reservoir(r).MergeCoeffPerRoute(Temp_indexes))*Temp_prodsupply;
-                if Temp_entryprodsupply < Temp_prodsupply
-                    dd = 1;
-                end
                 Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
                 Temp_entryflowdem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
                 if sum(Temp_entryflowdem) > 0
@@ -364,12 +358,14 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         else
             % Other merge models (for inflows)
             Temp_param = Reservoir(r).EntryfctParam;
-            Temp_prodsupply = Temp_QF*(Entryfct(Temp_nr,Temp_param)' - Reservoir(r).InternalProd);
+            Temp_totprodsupply = Temp_QF*(sum(Entryfct(Temp_nr,Temp_param)' - Reservoir(r).InternalProd));
+            Temp_totflowdem = Reservoir(r).InflowDemandPerRoute;
             for i_m = 1:NumModes
                 Temp_indexes = Reservoir(r).EntryRoutesIndex{i_m};
                 Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
                 Temp_proddem = Temp_Ltrip.*Reservoir(r).InflowDemandPerRoute(Temp_indexes);
                 Temp_flowdem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
+                Temp_prodsupply = (sum(Temp_flowdem)/sum(Temp_totflowdem))*Temp_totprodsupply;
                 Temp_nrp = Reservoir(r).AccCircuPerRoute(Temp_indexes,itime)';
                 Temp_nr_entry = sum(Temp_nrp);
                 if Temp_nr_entry == 0
@@ -377,10 +373,10 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
                 else
                     Temp_Lr_entry = Temp_nr_entry/sum(Temp_nrp./Temp_Ltrip);
                 end
-                if sum(Temp_proddem) < Temp_prodsupply(i_m)
+                if sum(Temp_proddem) < Temp_prodsupply
                     Temp_flowsupply = Inf;
                 else
-                    Temp_flowsupply = Temp_prodsupply(i_m)/Temp_Lr_entry;
+                    Temp_flowsupply = Temp_prodsupply/Temp_Lr_entry;
                 end
                 
                 Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
@@ -455,31 +451,31 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         Temp_outflowdemand = Reservoir(r).OutflowDemandPerRoute;
         Temp_outflowsupply = Reservoir(r).OutflowSupplyPerRoute;
         if strcmp(Simulation.DivergeModel,'maxdem')
-            if ~strcmp(Simulation.MergeModel,'demfifo')
-                Temp_exitlist = find(Temp_outflowdemand > Temp_outflowsupply);
+            % It is advisable to apply this maximum demand outflow per mode
+            % as treating both cars and buses alike can pose stability
+            % issues. By applying per mode, it is assumed that outflow
+            % reduction in cars do not influence the outflow of buses. This
+            % can be a reasonable assumption in the presence of bus lanes. 
+            for i_m = 1:NumModes
+                Temp_indexes = [Reservoir(r).ExitRoutesIndex{i_m} Reservoir(r).DestRoutesIndex{i_m}];
+                Temp_exitlist = find(Temp_outflowdemand(Temp_indexes) > Temp_outflowsupply(Temp_indexes));
                 if ~isempty(Temp_exitlist) % if there are outflow limitations
-                    Temp_nrp = Reservoir(r).AccCircuPerRoute(:,itime)';
-                    Temp_Ltrip = Reservoir(r).TripLengthPerRoute;
-                    Temp_Vr = Reservoir(r).MeanSpeed(Reservoir(r).RouteMode,itime)';
+                    Temp_nrp = Reservoir(r).AccCircuPerRoute(Temp_indexes,itime)';
+                    Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
+                    Temp_Vr = Reservoir(r).MeanSpeed(Reservoir(r).RouteMode(Temp_indexes),itime)';
                     Temp_Orp = Temp_Ltrip(Temp_exitlist).*Temp_outflowsupply(Temp_exitlist)./Temp_nrp(Temp_exitlist);
                     Temp_listmin = find(Temp_Orp == min(Temp_Orp));
                     imin = randi(length(Temp_listmin));
                     i_r2 = Temp_listmin(imin);
                     i_r_crit = Temp_exitlist(i_r2); % index of the critical exit (route)
-                    Temp_outflow_crit = Temp_outflowsupply(i_r_crit); % critical outflow
-                    Reservoir(r).OutflowPerRoute(:,itime) = ((Temp_nrp'.*Temp_Vr')./Temp_Ltrip').*(Temp_Ltrip(i_r_crit)./(Temp_Vr(i_r_crit).*Temp_nrp(i_r_crit))).*Temp_outflow_crit;
+                    Temp_outflow_crit = Temp_outflowsupply(Temp_indexes(i_r_crit)); % critical outflow
+                    Reservoir(r).OutflowPerRoute(Temp_indexes,itime) = ((Temp_nrp'.*Temp_Vr')./Temp_Ltrip')...
+                        .*(Temp_Ltrip(i_r_crit)./(Temp_Vr(i_r_crit).*Temp_nrp(i_r_crit))).*Temp_outflow_crit;
                 else
-                    Reservoir(r).OutflowPerRoute(:,itime) = Temp_outflowdemand';
+                    Reservoir(r).OutflowPerRoute(Temp_indexes,itime) = Temp_outflowdemand(Temp_indexes)';
                 end
-            else
-                % Using FIFO discipline at the entry and most constrainted
-                % approach at the exit can cause stability issues. Doing so
-                % we are constraining the system from both sides, which
-                % will create oscillations and eventually the system wont
-                % reach steady state. So, more relaxed approach at the exit
-                % is recommended when FIFO entry is used.
-                Reservoir(r).OutflowPerRoute(:,itime) = min([Temp_outflowdemand; Temp_outflowsupply])';
             end
+            
         elseif strcmp(Simulation.DivergeModel,'decrdem') || strcmp(Simulation.DivergeModel,'queuedyn')
             Reservoir(r).OutflowPerRoute(:,itime) = min([Temp_outflowdemand; Temp_outflowsupply])';
         end
@@ -493,7 +489,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         i_r = 1;
         for iroute = Reservoir(r).RoutesID % loop on all routes in Rr
             if r == Route(iroute).ResOriginID % Rr origin of the route
-                i_m = Reservoir(r).RouteMode(iroute);
+                i_m = Reservoir(r).RouteMode(i_r);
                 if ismember(i_r,Reservoir(r).EntryRoutesIndex{i_m}) % external origin
                     Reservoir(r).InflowPerRoute(i_r,itime) = Reservoir(r).InflowSupplyPerRoute(i_r); % max. allowed inflow
                     % Waiting lists at the route origins

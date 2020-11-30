@@ -254,7 +254,8 @@ for r = 1:NumRes
     Reservoir(r).ModeIndex = cell(1,NumModes); % mode of each route passing through the reservoir 1) Car 2) Bus
     Reservoir(r).RouteMode = []; % mode of each route passing through the reservoir 1) Car 2) Bus
     
-    Reservoir(r).EntryRoutesIndexPerNode = {}; % routes entering the reservoir per external node, indexes for Reservoir(i).RoutesID
+    Reservoir(r).EntryRoutesIndexPerNode = {}; % all routes entering the reservoir per external node, indexes for Reservoir(i).RoutesID
+    Reservoir(r).ExtEntryRoutesIndexPerNode = {}; % external routes entering the reservoir per external node, indexes for Reservoir(i).RoutesID
 end
 
 Temp_index = ones(1,NumRes);
@@ -346,12 +347,14 @@ for r = 1:NumRes
 end
 for r = 1:NumRes
     Temp_entrynodes = unique(Reservoir(r).RoutesNodeID(1,:));
-    i_n = 1;
+    i_n1 = 1;i_n2 = 1;
     for inode = Temp_entrynodes
+        i_r = find(Reservoir(r).RoutesNodeID(1,:) == inode);
+        Reservoir(r).EntryRoutesIndexPerNode{i_n1} = i_r;
+        i_n1 = i_n1 + 1;
         if strcmp(MacroNode(inode).Type,'externalentry') || strcmp(MacroNode(inode).Type,'border')
-            i_r = find(Reservoir(r).RoutesNodeID(1,:) == inode);
-            Reservoir(r).EntryRoutesIndexPerNode{i_n} = i_r;
-            i_n = i_n + 1;
+            Reservoir(r).ExtEntryRoutesIndexPerNode{i_n2} = i_r;
+            i_n2 = i_n2 + 1;
         end
     end
 end

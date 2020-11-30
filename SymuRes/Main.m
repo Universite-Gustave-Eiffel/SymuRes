@@ -29,10 +29,10 @@ Simulation.Network = 'Braess_2modes';
 
 % Choice of the solver
 % 1: accbased / 2: tripbased
-Simulation.Solver = 1;
+Simulation.Solver = 2;
 
 % Simulation name
-Simulation.Name = 'SC13';
+Simulation.Name = 'SC21';
 
 
 %% Launch simulation
@@ -108,7 +108,7 @@ try
     
     clear Temp_*
     
-    samplePlots
+    % samplePlots
     
     % Save simulation outputs
     %------------------------
