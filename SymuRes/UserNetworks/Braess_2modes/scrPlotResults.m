@@ -241,7 +241,7 @@ filename = Results(iresu).Name; % name for printing
 % Plot options
 ResList = [1 2 3 4]; % list of reservoirs
 RoutesList = [1 2 3]; % list of routes, put to [] for not plotting route states
-ResuList = [1]; % list of results
+ResuList = [1 2]; % list of results
 TimeRange = [0 Simulation.Duration]; % [s]
 AccRange = [0 1000]; % [veh]
 FlowRange = [0 3]; % [veh/s]

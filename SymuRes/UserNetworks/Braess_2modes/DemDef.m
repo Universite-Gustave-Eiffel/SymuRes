@@ -53,7 +53,7 @@ end
 if strcmp(Simulation.Name(1:4),'SC21')
     Simulation.MergeModel = 'demprorata'; % 'demprorata', 'demfifo', 'equiproba' or 'endogenous'
     Simulation.DivergeModel = 'maxdem'; % 'maxdem', 'decrdem' or 'queuedyn'
-    Simulation.TripbasedSimuFactor = 0.4; % factor < 1 to scale down the demand level and decrease the trip-based solver computation time
+    Simulation.TripbasedSimuFactor = 1.0; % factor < 1 to scale down the demand level and decrease the trip-based solver computation time
     DemSC2
 end
 

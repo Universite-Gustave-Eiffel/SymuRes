@@ -1,7 +1,7 @@
  
 ********************************************
 SymuRes V2.0 - network and demand definition
-Elapsed time is 0.229514 seconds.
+Elapsed time is 0.221978 seconds.
 Start simulation loop
  
 Assignment period 1 - Simulation time: 0
@@ -12,20 +12,10 @@ Travel time per route:
 206.7 	266.7 	200.0 	
 Assignment coefficient per route: 
 0.415 	0.585 	1.000 	 
-time=1941.662 	 nextevent=1 	 vehID=1000 
-time=2245.435 	 nextevent=2 	 vehID=1000 
-time=2388.776 	 nextevent=2 	 vehID=1000 
-time=5146.627 	 nextevent=2 	 vehID=1000 
-time=5226.844 	 nextevent=2 	 vehID=1000 
-time=7237.289 	 nextevent=1 	 vehID=2000 
-time=7316.294 	 nextevent=2 	 vehID=2000 
-time=7394.693 	 nextevent=2 	 vehID=2000 
-time=7462.556 	 nextevent=2 	 vehID=2000 
-time=7541.557 	 nextevent=2 	 vehID=2000 
-Gap = 0.163
+Gap = 0.159
  
 *****************
 End of simulation
-Elapsed time is 43.273828 seconds.
+Elapsed time is 3.250454 seconds.
 Simulation successfully saved as:
-UserNetworks/Braess_2modes/outputs/Outputs_SC21_tripbased.mat
+UserNetworks/Braess_2modes/outputs/Outputs_SC21_accbased.mat

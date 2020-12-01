@@ -793,6 +793,7 @@ while CurrentTime < Temp_EndTime
             for i_n = Reservoir(r).OriNodesIndex{i_m} % loop on all origin nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
                     Temp_dem = Temp_qinr1(Temp_indexes);
                     Temp_demtot = sum(Temp_dem);
@@ -801,7 +802,8 @@ while CurrentTime < Temp_EndTime
                     else
                         Temp_mergecoeff = ones(1,length(Temp_indexes));
                     end
-                    Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
+                    Temp_modesupplycoeff = sum(Temp_qinr1(Temp_indexes))/sum(Temp_qinr1(Temp_allindexes)); % split the total supply between each mode
+                    Temp_sup = Simulation.TripbasedSimuFactor.*Temp_modesupplycoeff.*MacroNode(inode).Supply;
                     Temp_inflow = mergeFair(Temp_dem,Temp_sup,Temp_mergecoeff);
                     Temp_supplytimes = Reservoir(r).LastEntryTimePerRoute(Temp_indexes) + 1./Temp_inflow;
                     Reservoir(r).EntrySupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
@@ -851,12 +853,15 @@ while CurrentTime < Temp_EndTime
         end
         
         % Inflow limitation due to node supply at entry (border supply)
+        Temp_inflowdemand = Temp_qinr1;
         for i_m = 1:NumModes
             for i_n = Reservoir(r).EntryNodesIndex{i_m} % loop on all entry border nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
-                    Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
+                    Temp_modesupplycoeff = sum(Temp_qinr1(Temp_indexes))/sum(Temp_qinr1(Temp_allindexes)); % split the total supply between each mode
+                    Temp_sup = Simulation.TripbasedSimuFactor.*Temp_modesupplycoeff.*MacroNode(inode).Supply;
                     % Modify the original desired entry times for the endogenous merge
                     if strcmp(Simulation.MergeModel,'endogenous')
                         Temp_demtimes = Reservoir(r).DesiredEntryTimePerRoute(Temp_indexes);
@@ -1002,12 +1007,14 @@ while CurrentTime < Temp_EndTime
             for i_n = Reservoir(r).DestNodesIndex{i_m} % loop on all destination nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
                     Temp_mergecoeff = Reservoir(r).ExitCoeffPerRoute(Temp_indexes);
                     Temp_mergecoefftot = sum(Temp_mergecoeff);
                     Temp_demtimes = Reservoir(r).DesiredExitTimePerRoute(Temp_indexes);
                     Temp_lasttimes = Reservoir(r).LastExitTimePerRoute(Temp_indexes);
-                    Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
+                    Temp_modesupplycoeff = sum(Temp_qoutr(Temp_indexes))/sum(Temp_qoutr(Temp_allindexes)); % split the total supply between each mode
+                    Temp_sup = Simulation.TripbasedSimuFactor.*Temp_modesupplycoeff.*MacroNode(inode).Supply;
                     
                     Temp_supplytimes = mergetimeFair(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,1,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
                     Reservoir(r).ExitSupplyTimePerRoute(Temp_indexes) = max([Temp_supplytimes; CurrentTime*ones(1,length(Temp_indexes))]);
@@ -1023,17 +1030,47 @@ while CurrentTime < Temp_EndTime
     NextEvent.ExitResList = Global.DestResList;
     for r = NextEvent.ResList % loop only on reservoirs where accumulation changed
         
+        % Outflow demand estimation
+        Temp_scf = Simulation.TripbasedSimuFactor;
+        Temp_Nroutes = length(Reservoir(r).RoutesID);
+        Temp_qoutr = zeros(1,Temp_Nroutes);
+        for i_r = 1:Temp_Nroutes
+            if Reservoir(r).DesiredExitTimePerRoute(i_r) > Reservoir(r).LastExitTimePerRoute(i_r) ...
+                    && Reservoir(r).LastExitTimePerRoute(i_r) > -Inf && Reservoir(r).DesiredExitTimePerRoute(i_r) < Inf
+                Temp_qoutr(i_r) = 1/(Reservoir(r).DesiredExitTimePerRoute(i_r) - Reservoir(r).LastExitTimePerRoute(i_r));
+            elseif Reservoir(r).DesiredExitTimePerRoute(i_r) == Inf
+                Temp_qoutr(i_r) = 0;
+            else
+                Temp_nr = Reservoir(r).CurrentAcc;
+                Temp_nrp = Reservoir(r).CurrentAccPerRoute(i_r);
+                Temp_Lrp = Reservoir(r).TripLengthPerRoute(i_r);
+                Temp_Pc = Reservoir(r).MaxProd;
+                i_m = Reservoir(r).RouteMode(i_r);
+                Temp_qoutr(i_r) = Temp_nrp/Temp_nr(i_m)*(Temp_scf*Temp_Pc)/Temp_Lrp; % maximum outflow
+            end
+        end
+        
+        % Exit merge coefficients (merge for several outflows ending in the same node)
+        Temp_dem = Temp_qoutr;
+        Temp_demtot = sum(Temp_dem);
+        if Temp_demtot > 0
+            Reservoir(r).ExitCoeffPerRoute = Temp_dem./Temp_demtot;
+        end
+        
         % Exit supply for external destinations and transfer to another reservoir
         for i_m = 1:NumModes
+            Temp_modeoutflowdemand = sum(Reservoir(r).ExitCoeffPerRoute(Reservoir(r).RouteMode == i_m));
             for i_n = Reservoir(r).ExitNodesIndex{i_m} % loop on all exit border nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
                     Temp_mergecoeff = Reservoir(r).ExitCoeffPerRoute(Temp_indexes);
                     Temp_mergecoefftot = sum(Temp_mergecoeff);
                     Temp_demtimes = Reservoir(r).DesiredExitTimePerRoute(Temp_indexes);
                     Temp_lasttimes = Reservoir(r).LastExitTimePerRoute(Temp_indexes);
-                    Temp_sup = Simulation.TripbasedSimuFactor.*MacroNode(inode).Supply;
+                    Temp_modesupplycoeff = sum(Temp_qoutr(Temp_indexes))/sum(Temp_qoutr(Temp_allindexes)); % split the total supply between each mode
+                    Temp_sup = Simulation.TripbasedSimuFactor.*Temp_modesupplycoeff.*MacroNode(inode).Supply;
                     
                     Temp_supplytimes = mergetimeFair(ones(1,length(Temp_indexes)),Temp_demtimes,Temp_lasttimes,1,Temp_sup,Temp_mergecoeff./Temp_mergecoefftot);
                     i = 1;

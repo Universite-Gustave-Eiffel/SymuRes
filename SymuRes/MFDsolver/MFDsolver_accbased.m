@@ -226,11 +226,13 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         Reservoir(r).NinDemandPerRoute(:,itime+1) = Reservoir(r).NinDemandPerRoute(:,itime) + Temp_dem'*TimeStep;
         
         % Effective inflow for internal origins (not restricted)
+        Temp_inflowdemand = Reservoir(r).InflowDemandPerRoute;
         Reservoir(r).InternalProd = zeros(1,NumModes);
         for i_m = 1:NumModes
             for i_n = Reservoir(r).OriNodesIndex{i_m} % loop on all origin nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}]; % all routes irrespective of mode for a given node
                 if ~isempty(Temp_indexes)
                     Temp_dem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
                     Temp_demtot = sum(Temp_dem);
@@ -239,7 +241,9 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
                     else
                         Temp_mergecoeff = ones(1,length(Temp_indexes));
                     end
-                    Temp_inflow = mergeFair(Temp_dem,MacroNode(inode).Supply(itime),Temp_mergecoeff);
+                    Temp_modesupplycoeff = sum(Temp_inflowdemand(Temp_indexes))/sum(Temp_inflowdemand(Temp_allindexes)); % split the total supply between each mode
+                    Temp_flowsupply = Temp_modesupplycoeff*MacroNode(inode).Supply(itime);
+                    Temp_inflow = mergeFair(Temp_dem,Temp_flowsupply,Temp_mergecoeff);
                     Reservoir(r).InflowPerRoute(Temp_indexes,itime) = Temp_inflow';
                     Temp_Ltrip = Reservoir(r).TripLengthPerRoute(Temp_indexes);
                     Reservoir(r).InternalProd(i_m) = Reservoir(r).InternalProd(i_m) + sum(Temp_Ltrip.*Temp_inflow);
@@ -287,16 +291,16 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         end
         
         % Inflow limitation due to node supply at entry (border supply)
+        Temp_inflowdemand = Reservoir(r).InflowDemandPerRoute;
         for i_m = 1:NumModes
             for i_n = Reservoir(r).EntryNodesIndex{i_m} % loop on all entry border nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
                     Temp_flowdem = Reservoir(r).InflowDemandPerRoute(Temp_indexes);
-                    Temp_dem = Reservoir(r).InflowDemandPerRoute;
-                    % Splitting the total capacity between two modes based
-                    % on their demand.
-                    Temp_flowsupply = (sum(Temp_flowdem)/sum(Temp_dem))*MacroNode(inode).Supply(itime);
+                    Temp_modesupplycoeff = sum(Temp_inflowdemand(Temp_indexes))/sum(Temp_inflowdemand(Temp_allindexes)); % split the total supply between each mode
+                    Temp_flowsupply = Temp_modesupplycoeff*MacroNode(inode).Supply(itime);
                     Temp_mergecoeff = Reservoir(r).MergeCoeffPerRoute(Temp_indexes);
                     Temp_mergecoefftot = sum(Temp_mergecoeff);
                     Temp_newflowdem = mergeFair(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff./Temp_mergecoefftot);
@@ -402,16 +406,18 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         end
         
         % Exit supply for internal destinations
+        Temp_outflowdemand = Reservoir(r).OutflowDemandPerRoute;
         for i_m = 1:NumModes
             for i_n = Reservoir(r).DestNodesIndex{i_m} % loop on all destination nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
                     Temp_flowdem = Reservoir(r).OutflowDemandPerRoute(Temp_indexes);
-                    Temp_dem = Reservoir(r).OutflowDemandPerRoute;
-                    Temp_flowsupply = (sum(Temp_flowdem)/sum(Temp_dem))*MacroNode(inode).Supply(itime);
                     Temp_mergecoeff = Reservoir(r).ExitCoeffPerRoute(Temp_indexes);
                     Temp_mergecoefftot = sum(Temp_mergecoeff);
+                    Temp_modesupplycoeff = sum(Temp_outflowdemand(Temp_indexes))/sum(Temp_outflowdemand(Temp_allindexes)); % split the total supply between each mode
+                    Temp_flowsupply = Temp_modesupplycoeff*MacroNode(inode).Supply(itime);
                     Temp_outflowsupply = mergeFair(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff./Temp_mergecoefftot);
                     Reservoir(r).OutflowSupplyPerRoute(Temp_indexes) = Temp_outflowsupply;
                 end
@@ -419,16 +425,18 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
         end
         
         % Exit supply for external destinations and transfer to another reservoir
+        Temp_outflowdemand = Reservoir(r).OutflowDemandPerRoute;
         for i_m = 1:NumModes
             for i_n = Reservoir(r).ExitNodesIndex{i_m} % loop on all exit border nodes in Rr
                 inode = Reservoir(r).MacroNodesID(i_n);
                 Temp_indexes = Reservoir(r).NodeRoutesIndex{i_m,i_n};
+                Temp_allindexes = [Reservoir(r).NodeRoutesIndex{:,i_n}];
                 if ~isempty(Temp_indexes)
                     Temp_flowdem = Reservoir(r).OutflowDemandPerRoute(Temp_indexes);
-                    Temp_dem = Reservoir(r).OutflowDemandPerRoute;
-                    Temp_flowsupply = (sum(Temp_flowdem)/sum(Temp_dem))*MacroNode(inode).Supply(itime);
                     Temp_mergecoeff = Reservoir(r).ExitCoeffPerRoute(Temp_indexes);
                     Temp_mergecoefftot = sum(Temp_mergecoeff);
+                    Temp_modesupplycoeff = sum(Temp_outflowdemand(Temp_indexes))/sum(Temp_outflowdemand(Temp_allindexes)); % split the total supply between each mode
+                    Temp_flowsupply = Temp_modesupplycoeff*MacroNode(inode).Supply(itime);
                     Temp_outflowsupply = mergeFair(Temp_flowdem,Temp_flowsupply,Temp_mergecoeff./Temp_mergecoefftot);
                     %Temp_outflowsupply = MacroNode(inode).Supply(itime)*Temp_mergecoeff./Temp_mergecoefftot;
                     i = 1;
@@ -455,7 +463,7 @@ for itime = Temp_StartTimeID:Temp_EndTimeID % loop on all times
             % as treating both cars and buses alike can pose stability
             % issues. By applying per mode, it is assumed that outflow
             % reduction in cars do not influence the outflow of buses. This
-            % can be a reasonable assumption in the presence of bus lanes. 
+            % can be a reasonable assumption in the presence of bus lanes.
             for i_m = 1:NumModes
                 Temp_indexes = [Reservoir(r).ExitRoutesIndex{i_m} Reservoir(r).DestRoutesIndex{i_m}];
                 Temp_exitlist = find(Temp_outflowdemand(Temp_indexes) > Temp_outflowsupply(Temp_indexes));

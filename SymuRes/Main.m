@@ -25,14 +25,14 @@ addpath('MFDsolver/','Assignment/','UserNetworks/','PostProc/','Route/','Converg
 %--------------------------------------------------------------------------
 
 % Choice of a network defined by user
-Simulation.Network = 'SingleRes_2modes';
+Simulation.Network = 'Braess_2modes';
 
 % Choice of the solver
 % 1: accbased / 2: tripbased
 Simulation.Solver = 1;
 
 % Simulation name
-Simulation.Name = 'SC33';
+Simulation.Name = 'SC21';
 
 
 %% Launch simulation
@@ -107,8 +107,6 @@ try
     toc;
     
     clear Temp_*
-    
-    % samplePlots
     
     % Save simulation outputs
     %------------------------
