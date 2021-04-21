@@ -23,6 +23,7 @@ MFDfct = @parabo3dFD;
 % Entry supply function
 Entryfct = @parabo3dEntryFD;
 
+% Exit demand function
 Exitfct = @parabo3dExitFD;
 
 % Reservoir definition
@@ -133,7 +134,7 @@ Reservoir(i).ExitfctParam = Reservoir(i).MFDfctParam;
 % MacroNode.Capacity.Data ; row vector of capacity values across time
 
 i = 1;
-MacroNode(i).Type = 'origin';
+MacroNode(i).Type = 'externalentry';
 MacroNode(i).ResID = 1;
 MacroNode(i).Coord = Reservoir(1).Centroid + [0 0.2];
 MacroNode(i).Capacity.Time = 0; % [s]
@@ -147,7 +148,7 @@ MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
 i = 3;
-MacroNode(i).Type = 'destination';
+MacroNode(i).Type = 'externalexit';
 MacroNode(i).ResID = 4;
 MacroNode(i).Coord = Reservoir(4).Centroid + [0 0.2];
 MacroNode(i).Capacity.Time = 0; % [s]
@@ -159,6 +160,7 @@ MacroNode(i).ResID = 4;
 MacroNode(i).Coord = Reservoir(4).Centroid + [0 -0.2];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
+
 
 i = 5;
 for r = 1:(NumRes-1)
@@ -187,6 +189,21 @@ MacroNode(i).Coord = Reservoir(2).Centroid + [0 -0.2];
 MacroNode(i).Capacity.Time = 0; % [s]
 MacroNode(i).Capacity.Data = 100; % [veh/s]
 
+i = i + 1;
+MacroNode(i).Type = 'externalentry';
+MacroNode(i).ResID = 1;
+MacroNode(i).Coord = Reservoir(2).Centroid + [0 0.2];
+MacroNode(i).Capacity.Time = 0; % [s]
+MacroNode(i).Capacity.Data = 100; % [veh/s]
+
+i = i + 1;
+MacroNode(i).Type = 'externalentry';
+MacroNode(i).ResID = 2;
+MacroNode(i).Coord = Reservoir(2).Centroid + [0 0.2];
+MacroNode(i).Capacity.Time = 0; % [s]
+MacroNode(i).Capacity.Data = 100; % [veh/s]
+
+
 NumMacroNodes = i;
 
 % Append to Reservoir structure
@@ -199,10 +216,6 @@ for r = 1:NumRes
     end
     Reservoir(r).MacroNodesID = unique(Reservoir(r).MacroNodesID);
 end
-
-
-
-
 
 %%% ODMACRO
 % Macro OD at the city scale. An ODmacro is defined by an origin reservoir
@@ -322,6 +335,37 @@ for o = 1:NumOrigins % loop on all possible origins
             iroute = 5;
             ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3 4];
             ODmacro(od).PossibleRoute(iroute).NodePath = [2 5 7 9 4];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1500 1500 1500 1500];
+            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
+        end
+        
+        % R1 to R4
+        if Temp_orinodes(o) == 12 && Temp_destnodes(d) == 3
+            ODmacro(od).NumPossibleRoutes = 5;
+            iroute = 1;
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 4];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [12 5 8 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000];
+            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
+            iroute = 2;
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 3 4];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [12 6 9 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1100 1000];
+            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
+            iroute = 3;
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3 4];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [12 5 7 9 3];
+            %ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 2000 1000];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [1000 1000 1000 1000];
+            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
+            iroute = 4;
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 3 2 4];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [12 6 7 8 3];
+            ODmacro(od).PossibleRoute(iroute).TripLengths = [2000 2000 2000 2000];
+            ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
+            iroute = 5;
+            ODmacro(od).PossibleRoute(iroute).ResPath = [1 2 3 4];
+            ODmacro(od).PossibleRoute(iroute).NodePath = [12 5 7 9 3];
             ODmacro(od).PossibleRoute(iroute).TripLengths = [1500 1500 1500 1500];
             ODmacro(od).PossibleRoute(iroute).NumMicroTrips = 1000;
         end

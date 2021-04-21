@@ -253,9 +253,13 @@ for r = 1:NumRes
     
     Reservoir(r).ModeIndex = cell(1,NumModes); % mode of each route passing through the reservoir 1) Car 2) Bus
     Reservoir(r).RouteMode = []; % mode of each route passing through the reservoir 1) Car 2) Bus
+    
+    Reservoir(r).EntryRoutesIndexPerNode = {}; % all routes entering the reservoir per external node, indexes for Reservoir(i).RoutesID
+    Reservoir(r).ExtEntryRoutesIndexPerNode = {}; % external routes entering the reservoir per external node, indexes for Reservoir(i).RoutesID
 end
 
 Temp_index = ones(1,NumRes);
+Temp_t = [];
 for iroute = 1:NumRoutes
     i_p = 1;
     i_m = Route(iroute).ModeID;
@@ -294,16 +298,16 @@ for iroute = 1:NumRoutes
         Reservoir(r).RouteMode = [Reservoir(r).RouteMode i_m];
         Reservoir(r).ModeIndex{i_m} = [Reservoir(r).ModeIndex{i_m} Temp_index(r)];
         
-%         if strcmp(Route(iroute).Mode, 'cartrip')
-%             Reservoir(r).ModeIndex{1} = [Reservoir(r).ModeIndex{1} Temp_index(r)];
-%         elseif strcmp(Route(iroute).Mode, 'publictransport')
-%             Reservoir(r).ModeIndex{2} = [Reservoir(r).ModeIndex{2} Temp_index(r)];
-%         end
-%         if strcmp(Route(iroute).Mode, 'cartrip')
-%             Reservoir(r).RouteMode = [Reservoir(r).RouteMode 1];
-%         elseif strcmp(Route(iroute).Mode, 'publictransport')
-%             Reservoir(r).RouteMode = [Reservoir(r).RouteMode 2];
-%         end
+        %         if strcmp(Route(iroute).Mode, 'cartrip')
+        %             Reservoir(r).ModeIndex{1} = [Reservoir(r).ModeIndex{1} Temp_index(r)];
+        %         elseif strcmp(Route(iroute).Mode, 'publictransport')
+        %             Reservoir(r).ModeIndex{2} = [Reservoir(r).ModeIndex{2} Temp_index(r)];
+        %         end
+        %         if strcmp(Route(iroute).Mode, 'cartrip')
+        %             Reservoir(r).RouteMode = [Reservoir(r).RouteMode 1];
+        %         elseif strcmp(Route(iroute).Mode, 'publictransport')
+        %             Reservoir(r).RouteMode = [Reservoir(r).RouteMode 2];
+        %         end
         
         Temp_index(r) = Temp_index(r) + 1;
         i_p = i_p + 1;
@@ -338,6 +342,19 @@ for r = 1:NumRes
         for iroute = Reservoir(r).RoutesID
             Route(iroute).ResRouteIndex(r) = i_r;
             i_r = i_r + 1;
+        end
+    end
+end
+for r = 1:NumRes
+    Temp_entrynodes = unique(Reservoir(r).RoutesNodeID(1,:));
+    i_n1 = 1;i_n2 = 1;
+    for inode = Temp_entrynodes
+        i_r = find(Reservoir(r).RoutesNodeID(1,:) == inode);
+        Reservoir(r).EntryRoutesIndexPerNode{i_n1} = i_r;
+        i_n1 = i_n1 + 1;
+        if strcmp(MacroNode(inode).Type,'externalentry') || strcmp(MacroNode(inode).Type,'border')
+            Reservoir(r).ExtEntryRoutesIndexPerNode{i_n2} = i_r;
+            i_n2 = i_n2 + 1;
         end
     end
 end
